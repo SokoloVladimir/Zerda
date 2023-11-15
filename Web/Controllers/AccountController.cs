@@ -1,5 +1,5 @@
-using Context.Data;
-using Context.Model;
+using Data.Context;
+using Data.Model;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -10,7 +10,7 @@ using System.Security.Claims;
 namespace Web.Controllers
 {
     [ApiController]
-    [Route("[controller]")]    
+    [Route("[controller]")]
     public class AccountController : AbstractController<Account>
     {
         public AccountController(ILogger<AccountController> logger, ZerdaContext dbContext) : base(logger, dbContext) { }
@@ -18,7 +18,7 @@ namespace Web.Controllers
         /// <summary>
         /// Deleting
         /// </summary>
-        /// <param name="id">Account id</param>
+        /// <param name="id">id</param>
         /// <returns></returns>
         /// <response code="200">Never return</response>
         /// <response code="204">Success delete</response>
@@ -26,9 +26,8 @@ namespace Web.Controllers
         /// <response code="409">Couldn't delete relationship (state unchanched)</response>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
-        {            
-
-            return StatusCode(DeleteData(await _dbContext.Account.FirstOrDefaultAsync(x => x.Id == id)));
+        {
+            return StatusCode(DeleteData(_dbContext.Account.FirstOrDefault(x => x.Id == id)));
         }
     }
 }

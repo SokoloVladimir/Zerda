@@ -1,6 +1,7 @@
-﻿using Context.Data;
-using Context.Model;
+﻿using Data.Context;
+using Data.Model;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Web.Controllers
 {

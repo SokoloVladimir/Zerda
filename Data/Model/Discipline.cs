@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace Context.Data;
+namespace Data.Model;
 
 [Index("Name", Name = "Name_UNIQUE", IsUnique = true)]
 public partial class Discipline

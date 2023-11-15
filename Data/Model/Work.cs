@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace Context.Data;
+namespace Data.Model;
 
 [Index("DisciplineId", "WorkTypeName", "Number", Name = "WorkMeta_UNIQUE", IsUnique = true)]
 [Index("WorkTypeName", Name = "WorkType_Work_FK_idx")]

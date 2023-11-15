@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace Context.Data;
+namespace Data.Model;
 
 [PrimaryKey("UserId", "WorkId")]
 [Index("UserId", Name = "fk_Work_has_Student_Student1_idx")]
@@ -26,8 +26,8 @@ public partial class Result
     /// <summary>
     /// Массив бит для обозначения выполненных работ
     /// </summary>
-    [MaxLength(256)]
-    public byte[] Tasks { get; set; } = null!;
+    [Column(TypeName = "bit(64)")]
+    public ulong Tasks { get; set; }
 
     [ForeignKey("UserId")]
     [InverseProperty("Result")]

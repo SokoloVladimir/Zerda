@@ -1,5 +1,5 @@
-﻿using Context.Data;
-using Context.Model;
+﻿using Data.Context;
+using Data.Model;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Web.Controllers

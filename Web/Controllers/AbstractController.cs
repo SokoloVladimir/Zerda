@@ -1,5 +1,5 @@
-using Context.Data;
-using Context.Model;
+using Data.Context;
+using Data.Model;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
@@ -77,7 +77,7 @@ namespace Web.Controllers
             {
                 return StatusCode(500);
             }            
-        }
+        }     
 
         protected int DeleteData(T? obj)
         {

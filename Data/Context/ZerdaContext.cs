@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using Context.Data;
+using Data.Model;
 using Microsoft.EntityFrameworkCore;
 
-namespace Context.Model;
+namespace Data.Context;
 
 public partial class ZerdaContext : DbContext
 {

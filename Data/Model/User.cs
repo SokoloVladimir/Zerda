@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace Context.Data;
+namespace Data.Model;
 
 [Index("AccountId", Name = "AccountId_UNIQUE", IsUnique = true)]
 [Index("GroupId", Name = "Group_FK")]

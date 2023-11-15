@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace Context.Data;
+namespace Data.Model;
 
 [Index("Login", Name = "Login_UNIQUE", IsUnique = true)]
 public partial class Account
