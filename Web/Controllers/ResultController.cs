@@ -69,6 +69,50 @@ namespace Web.Controllers
         }
 
         /// <summary>
+        /// Get results by user id for kirill
+        /// </summary>
+        /// <param name="userId">user Id</param>
+        /// <param name="workId">work Id</param>
+        /// <param name="disciplineId">discipline Id</param>
+        /// <param name="groupId">group Id</param>
+        /// <param name="limit">count records to get (max 50)</param>
+        /// <param name="offset">starting position relative to the beginning of the table</param>
+        /// <returns>List of objects</returns>
+        /// <response code="200">Success</response>
+        [ProducesResponseType(typeof(IEnumerable<Result>), (int)HttpStatusCode.OK)]
+        [HttpGet("withBitArray")]
+        public async Task<IActionResult> GetByUserIdBitArray(
+            int? userId = null,
+            int? workId = null,
+            int? disciplineId = null,
+            int? groupId = null,
+            int limit = 50,
+            int offset = 0
+            )
+        {
+            return StatusCode(200, await _dbContext.Result
+                .AsNoTracking()
+                .Include(x => x.Work).ThenInclude(x => x.Discipline)
+                .Include(x => x.User).ThenInclude(x => x.Group)
+                .Where(x => userId == null || x.UserId == userId)
+                .Where(x => workId == null || x.WorkId == workId)
+                .Where(x => disciplineId == null || x.Work.DisciplineId == disciplineId)
+                .Where(x => groupId == null || x.User.Group.Id == groupId)
+                .OrderBy(x => x.UserId).ThenBy(x => x.WorkId)
+                .Skip(offset)
+                .Take(Math.Min(limit, 50))
+                .Select(x => new
+                {
+                    x.UserId,
+                    x.WorkId,
+                    Tasks = BitArrayToStringArray(new BitArray(BitConverter.GetBytes(x.Tasks)), (uint)x.Work.TaskCount),
+                    WorkTaskCount = x.Work.TaskCount
+                })
+                .ToListAsync()
+            );
+        }
+
+        /// <summary>
         /// Setting tasks value
         /// </summary>
         /// <response code="200">Never return</response>
@@ -213,6 +257,18 @@ namespace Web.Controllers
         static ulong UnsetBitsAfterN(ulong value, uint n)
         {
             return value & (ulong)((1 << (int)n) - 1);
+        }
+
+        static string[] BitArrayToStringArray(BitArray bits, uint count)
+        {
+            List<string> builder = new List<string>();
+
+            for (int i = 0; i < count; i++)
+            {
+                builder.Add(bits[i] ? "1" : "0");
+            }
+
+            return builder.ToArray();
         }
     }
 }
