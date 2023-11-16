@@ -2,7 +2,6 @@ using Data.Context;
 using Data.Model;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.ComponentModel.DataAnnotations;
 using System.Net;
 
 namespace Web.Controllers
@@ -28,23 +27,24 @@ namespace Web.Controllers
         /// <param name="offset">starting position relative to the beginning of the table</param>
         /// <returns>List of objects</returns>
         /// <response code="200">Success</response>
-        [ProducesResponseType(typeof(List<User>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(IEnumerable<User>), (int)HttpStatusCode.OK)]
         [HttpGet()]
-        public async Task<List<User>> Get(
-            [Range(1, 50, ErrorMessage = "limit range err")] 
-            [FromQuery] 
-                int limit = 50, 
-            [Range(0, Double.MaxValue, ErrorMessage = "offset must be non-negative")] 
-            [FromQuery]
-                int offset = 0)
+        public async Task<IActionResult> Get(int limit = 50, int offset = 0)
         {
-            return await _dbContext.User.Skip(offset).Take(Math.Min(50, limit)).ToListAsync();
-        }  
+            return StatusCode(200, await _dbContext.User
+                .Include(x => x.Account)
+                .Include(x => x.Group)
+                .AsNoTracking()
+                .OrderBy(x => x.Id)
+                .Skip(offset)
+                .Take(Math.Min(limit, 50))
+                .ToListAsync());
+        }
 
         /// <summary>
-        /// Adding
+        /// Adding object
         /// </summary>
-        /// <response code="200">Never return</response>\
+        /// <response code="200">Never return</response>
         /// <response code="201">Success adding</response>
         /// <response code="204">Duplicate object (state unchanged)</response>
         /// <returns>Created object</returns>
@@ -54,7 +54,7 @@ namespace Web.Controllers
         {
             try
             {
-                await _dbContext.AddAsync(obj);
+                await _dbContext.User.AddAsync(obj);
                 await _dbContext.SaveChangesAsync();
                 return StatusCode(201, obj);
             }
@@ -70,21 +70,21 @@ namespace Web.Controllers
             catch
             {
                 return StatusCode(500);
-            }            
+            }
         }
 
         /// <summary>
-        /// Deleting
+        /// Deleting object
         /// </summary>
-        /// <param name="id">Obj id</param>
-        /// <returns></returns>
+        /// <param name="id">required id</param>
+        /// <returns>response</returns>
         /// <response code="200">Never return</response>
         /// <response code="204">Success delete</response>
         /// <response code="404">Couldn't find obj (state unchanched)</response>
         /// <response code="409">Couldn't delete relationship (state unchanched)</response>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
-        { 
+        {
             try
             {
                 User? obj = _dbContext.User.FirstOrDefault(x => x.Id == id);
@@ -101,7 +101,7 @@ namespace Web.Controllers
             }
             catch (DbUpdateException ex)
             {
-                if (ex.InnerException is MySqlConnector.MySqlException 
+                if (ex.InnerException is MySqlConnector.MySqlException
                     && ex.InnerException.Message.Contains("Cannot delete or update a parent row"))
                 {
                     _logger.LogWarning("Попытка удаления связанной записи");
@@ -113,7 +113,7 @@ namespace Web.Controllers
             {
                 return StatusCode(500);
             }
-            
+
         }
     }
 }

@@ -22,32 +22,38 @@ namespace Web.Controllers
         }
 
         /// <summary>
-        /// Получение типа работы
+        /// Get request
         /// </summary>
-        /// <response code="200">Успешное выполнение</response>
-        /// <returns>Список типа работ</returns>
-        //[Authorize(Roles = "teacher")]
-        [ProducesResponseType(typeof(string[]), (int)HttpStatusCode.OK)]
+        /// <param name="limit">count records to get (max 50)</param>
+        /// <param name="offset">starting position relative to the beginning of the table</param>
+        /// <returns>List of objects</returns>
+        /// <response code="200">Success</response>
+        [ProducesResponseType(typeof(IEnumerable<WorkType>), (int)HttpStatusCode.OK)]
         [HttpGet()]
-        public async Task<IEnumerable<String>> Get()
+        public async Task<IActionResult> Get(int limit = 50, int offset = 0)
         {
-            return await _dbContext.WorkType.Select(x => x.Name).ToListAsync();
+            return StatusCode(200,await _dbContext.WorkType
+                .AsNoTracking()
+                .OrderBy(x => x.Id)
+                .Skip(offset)
+                .Take(Math.Min(limit, 50))
+                .ToListAsync());
         }
 
         /// <summary>
-        /// Добавление типа работы
+        /// Adding object
         /// </summary>
-        /// <response code="200">Не возвращается для этого метода</response>\
-        /// <response code="201">Успешное добавление</response>
-        /// <response code="204">Объект уже существует (состояние не изменено)</response>
-        /// <returns>Созданный объект</returns>
+        /// <response code="200">Never return</response>
+        /// <response code="201">Success adding</response>
+        /// <response code="204">Duplicate object (state unchanged)</response>
+        /// <returns>Created object</returns>
         [ProducesResponseType(typeof(WorkType), (int)HttpStatusCode.Created)]
         [HttpPost()]
         public async Task<IActionResult> Post([FromBody] WorkType obj)
         {
             try
             {
-                await _dbContext.AddAsync(obj);
+                await _dbContext.WorkType.AddAsync(obj);
                 await _dbContext.SaveChangesAsync();
                 return StatusCode(201, obj);
             }
@@ -67,20 +73,20 @@ namespace Web.Controllers
         }
 
         /// <summary>
-        /// Удаление типа работы
+        /// Deleting object
         /// </summary>
-        /// <param name="name">Наименование удаляемого типа работы</param>
-        /// <returns></returns>
-        /// <response code="200">Не возвращается для этого метода</response>
-        /// <response code="204">Успешное удаление</response>
-        /// <response code="404">Не удалось найти объект (состояние не изменено)</response>
-        /// <response code="409">Не удалось удалить так как есть связанные записи (состояние не изменено)</response>
-        [HttpDelete("{name}")]
-        public async Task<IActionResult> Delete(String name)
+        /// <param name="id">required id</param>
+        /// <returns>response</returns>
+        /// <response code="200">Never return</response>
+        /// <response code="204">Success delete</response>
+        /// <response code="404">Couldn't find obj (state unchanched)</response>
+        /// <response code="409">Couldn't delete relationship (state unchanched)</response>
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
         { 
             try
             {
-                WorkType? obj = _dbContext.WorkType.FirstOrDefault(x => x.Name == name);
+                WorkType? obj = _dbContext.WorkType.FirstOrDefault(x => x.Id == id);
                 if (obj is null)
                 {
                     return NotFound();
