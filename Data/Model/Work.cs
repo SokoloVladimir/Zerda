@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 
 namespace Data.Model;
 
-[Index("DisciplineId", "WorkTypeName", "Number", Name = "WorkMeta_UNIQUE", IsUnique = true)]
-[Index("WorkTypeName", Name = "WorkType_Work_FK_idx")]
+[Index("DisciplineId", "WorkTypeId", "Number", Name = "WorkMeta_UNIQUE", IsUnique = true)]
+[Index("WorkTypeId", Name = "WorkType_Work_FK_idx")]
 public partial class Work
 {
     /// <summary>
@@ -24,8 +25,7 @@ public partial class Work
     /// <summary>
     /// Тип работы (внешний ключ)
     /// </summary>
-    [StringLength(50)]
-    public string WorkTypeName { get; set; } = null!;
+    public int WorkTypeId { get; set; }
 
     /// <summary>
     /// Номер работы
@@ -53,10 +53,11 @@ public partial class Work
     [InverseProperty("Work")]
     public virtual Discipline Discipline { get; set; } = null!;
 
+    [JsonIgnore]
     [InverseProperty("Work")]
     public virtual ICollection<Result> Result { get; } = new List<Result>();
 
-    [ForeignKey("WorkTypeName")]
+    [ForeignKey("WorkTypeId")]
     [InverseProperty("Work")]
-    public virtual WorkType WorkTypeNameNavigation { get; set; } = null!;
+    public virtual WorkType WorkType { get; set; } = null!;
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 
 namespace Data.Model;
@@ -24,9 +25,11 @@ public partial class Account
     /// <summary>
     /// Хэш пароля алгоритмом bcrypt 
     /// </summary>
+    [JsonIgnore]
     [StringLength(60)]
     public string PasswordHash { get; set; } = null!;
 
+    [JsonIgnore]
     [InverseProperty("Account")]
     public virtual User? User { get; set; }
 }

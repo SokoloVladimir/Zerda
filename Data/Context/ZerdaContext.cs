@@ -73,7 +73,9 @@ public partial class ZerdaContext : DbContext
 
             entity.Property(e => e.UserId).HasComment("Идентификатор пользователя");
             entity.Property(e => e.WorkId).HasComment("Идентификатор работы");
-            entity.Property(e => e.Tasks).HasComment("Массив бит для обозначения выполненных работ");
+            entity.Property(e => e.Tasks)
+                .HasDefaultValueSql("b'0'")
+                .HasComment("Массив бит для обозначения выполненных работ");
 
             entity.HasOne(d => d.User).WithMany(p => p.Result)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -117,20 +119,20 @@ public partial class ZerdaContext : DbContext
             entity.Property(e => e.Theme)
                 .HasDefaultValueSql("'Без темы'")
                 .HasComment("Тема работы. Может быть достаточно длинным.");
-            entity.Property(e => e.WorkTypeName).HasComment("Тип работы (внешний ключ)");
+            entity.Property(e => e.WorkTypeId).HasComment("Тип работы (внешний ключ)");
 
             entity.HasOne(d => d.Discipline).WithMany(p => p.Work)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("Discipline_Work_FK");
 
-            entity.HasOne(d => d.WorkTypeNameNavigation).WithMany(p => p.Work)
+            entity.HasOne(d => d.WorkType).WithMany(p => p.Work)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("WorkType_Work_FK");
         });
 
         modelBuilder.Entity<WorkType>(entity =>
         {
-            entity.HasKey(e => e.Name).HasName("PRIMARY");
+            entity.HasKey(e => e.Id).HasName("PRIMARY");
 
             entity.Property(e => e.Name).HasComment("Идентифицирующее наименование типа работы");
         });

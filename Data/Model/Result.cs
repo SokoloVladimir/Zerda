@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 
 namespace Data.Model;
@@ -29,10 +30,12 @@ public partial class Result
     [Column(TypeName = "bit(64)")]
     public ulong Tasks { get; set; }
 
+    [JsonIgnore]
     [ForeignKey("UserId")]
     [InverseProperty("Result")]
     public virtual User User { get; set; } = null!;
 
+    [JsonIgnore]
     [ForeignKey("WorkId")]
     [InverseProperty("Result")]
     public virtual Work Work { get; set; } = null!;

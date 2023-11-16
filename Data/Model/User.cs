@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 
 namespace Data.Model;
@@ -57,6 +58,7 @@ public partial class User
     [InverseProperty("User")]
     public virtual Group Group { get; set; } = null!;
 
+    [JsonIgnore]
     [InverseProperty("User")]
     public virtual ICollection<Result> Result { get; } = new List<Result>();
 }

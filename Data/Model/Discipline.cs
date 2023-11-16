@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 
 namespace Data.Model;
@@ -21,6 +22,7 @@ public partial class Discipline
     [StringLength(100)]
     public string Name { get; set; } = null!;
 
+    [JsonIgnore]
     [InverseProperty("Discipline")]
     public virtual ICollection<Work> Work { get; } = new List<Work>();
 }
