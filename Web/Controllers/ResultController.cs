@@ -24,6 +24,7 @@ namespace Web.Controllers
             _dbContext = dbContext;
         }
 
+        #region GET
         /// <summary>
         /// Get results by user id
         /// </summary>
@@ -79,7 +80,7 @@ namespace Web.Controllers
         /// <param name="offset">starting position relative to the beginning of the table</param>
         /// <returns>List of objects</returns>
         /// <response code="200">Success</response>
-        [ProducesResponseType(typeof(IEnumerable<Result>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
         [HttpGet("withBitArray")]
         public async Task<IActionResult> GetByUserIdBitArray(
             int? userId = null,
@@ -111,21 +112,23 @@ namespace Web.Controllers
                 .ToListAsync()
             );
         }
+        #endregion
 
+        #region POST
         /// <summary>
         /// Setting tasks value
         /// </summary>
         /// <response code="200">Never return</response>
         /// <response code="204">Success update</response>
-        /// <response code="404">Couldn't create object before put (state unchanged)</response>
-        /// <returns>Created object</returns>
-        [ProducesResponseType((int)HttpStatusCode.NoContent)]        
-        [HttpPut("{userId}/{workId}/{value}")]        
-        public async Task<IActionResult> Put([Required] int userId, [Required] int workId, [Required] uint value)
+        /// <response code="404">Couldn't create object before post (state unchanged)</response>
+        /// <returns></returns>
+        [ProducesResponseType((int)HttpStatusCode.NoContent)]
+        [HttpPost("{userId}/{workId}/{value}")]
+        public async Task<IActionResult> Post([Required] int userId, [Required] int workId, [Required] uint value)
         {
             try
             {
-                await PutData(userId, workId, value);
+                await PostData(userId, workId, value);
                 return StatusCode(204);
             }
             catch (DbUpdateException ex)
@@ -147,8 +150,93 @@ namespace Web.Controllers
         /// </summary>
         /// <response code="200">Never return</response>
         /// <response code="204">Success update</response>
+        /// <response code="404">Couldn't create object before post (state unchanged)</response>
+        /// <returns></returns>
+        [ProducesResponseType((int)HttpStatusCode.NoContent)]
+        [HttpPost("{userId}/{workId}")]
+        public async Task<IActionResult> PostByJson([Required] int userId, [Required] int workId, [FromBody] int[] values)
+        {
+            try
+            {
+                await PostData(userId, workId, BitArrayToInt(
+                    new BitArray(
+                        values.Select(Convert.ToBoolean).ToArray())
+                    )
+                );
+                return StatusCode(204);
+            }
+            catch (DbUpdateException ex)
+            {
+                if (ex.InnerException?.Message.Contains("Cannot add or update a child row") == true)
+                {
+                    return StatusCode(404, "Not such work or user");
+                }
+                return StatusCode(500, "DbUpdateException");
+            }
+            catch
+            {
+                return StatusCode(500);
+            }
+        }
+
+        private async Task PostData(int userId, int workId, uint value)
+        {
+            Result? result = await _dbContext.Result.FirstOrDefaultAsync(x => x.UserId == userId && x.WorkId == workId);
+            Work work = await _dbContext.Work.FirstAsync(x => x.Id == workId);
+
+            if (result is null)
+            {
+                result = new Result()
+                {
+                    UserId = userId,
+                    WorkId = workId,
+                };
+
+                _dbContext.Result.Add(result);
+            }
+            result.Tasks = value;
+            await _dbContext.SaveChangesAsync();
+        }
+        #endregion
+
+        #region PUT
+        /// <summary>
+        /// Adding (logical disjunction) tasks value
+        /// </summary>
+        /// <response code="200">Never return</response>
+        /// <response code="204">Success update</response>
         /// <response code="404">Couldn't create object before put (state unchanged)</response>
-        /// <returns>Created object</returns>
+        /// <returns></returns>
+        [ProducesResponseType((int)HttpStatusCode.NoContent)]        
+        [HttpPut("{userId}/{workId}/{value}")]        
+        public async Task<IActionResult> Put([Required] int userId, [Required] int workId, [Required] ulong value)
+        {
+            try
+            {
+                await PutData(userId, workId, value);
+                return StatusCode(204);
+            }
+            catch (DbUpdateException ex)
+            {
+                if (ex.InnerException?.Message.Contains("Cannot add or update a child row") == true)
+                {
+                    return StatusCode(404, "Not such work or user");
+                }
+                return StatusCode(500, "DbUpdateException");
+            }
+            catch
+            {
+                return StatusCode(500);
+            }
+        }
+
+        /// <summary>
+        /// Adding (logical disjunction) tasks value from body
+        /// </summary>
+        /// <response code="200">Never return</response>
+        /// <response code="204">Success update</response>
+        /// <response code="404">Couldn't create object before put (state unchanged)</response>
+        /// <returns></returns>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [HttpPut("{userId}/{workId}")]
         public async Task<IActionResult> PutByJson([Required] int userId, [Required] int workId, [FromBody] int[] values)
@@ -176,7 +264,7 @@ namespace Web.Controllers
             }
         }
 
-        private async Task PutData(int userId, int workId, uint value)
+        private async Task PutData(int userId, int workId, ulong value)
         {
             Result? result = await _dbContext.Result.FirstOrDefaultAsync(x => x.UserId == userId && x.WorkId == workId);
             Work work = await _dbContext.Work.FirstAsync(x => x.Id == workId);
@@ -191,10 +279,12 @@ namespace Web.Controllers
 
                 _dbContext.Result.Add(result);
             }
-            result.Tasks = value;
+            result.Tasks |= value;
             await _dbContext.SaveChangesAsync();
         }
+        #endregion
 
+        #region DELETE
         /// <summary>
         /// Deleting object
         /// </summary>
@@ -238,7 +328,7 @@ namespace Web.Controllers
             }
 
         }
-
+        #endregion
 
         #region Static
 
