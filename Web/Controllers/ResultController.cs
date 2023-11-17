@@ -105,7 +105,7 @@ namespace Web.Controllers
                 {
                     x.UserId,
                     x.WorkId,
-                    Tasks = BitArrayToStringArray(new BitArray(BitConverter.GetBytes(x.Tasks)), (uint)x.Work.TaskCount),
+                    Tasks = BitArrayToIntArray(new BitArray(BitConverter.GetBytes(x.Tasks)), (uint)x.Work.TaskCount),
                     WorkTaskCount = x.Work.TaskCount
                 })
                 .ToListAsync()
@@ -239,6 +239,9 @@ namespace Web.Controllers
 
         }
 
+
+        #region Static
+
         private static uint BitArrayToInt(BitArray input)
         {
             uint result = 0;
@@ -254,12 +257,12 @@ namespace Web.Controllers
             return result;
         }
 
-        static ulong UnsetBitsAfterN(ulong value, uint n)
+        private static ulong UnsetBitsAfterN(ulong value, uint n)
         {
             return value & (ulong)((1 << (int)n) - 1);
         }
 
-        static string[] BitArrayToStringArray(BitArray bits, uint count)
+        private static string[] BitArrayToStringArray(BitArray bits, uint count)
         {
             List<string> builder = new List<string>();
 
@@ -270,5 +273,18 @@ namespace Web.Controllers
 
             return builder.ToArray();
         }
+
+        private static int[] BitArrayToIntArray(BitArray bits, uint count)
+        {
+            List<int> builder = new List<int>();
+
+            for (int i = 0; i < count; i++)
+            {
+                builder.Add(bits[i] ? 1 : 0);
+            }
+
+            return builder.ToArray();
+        }
+        #endregion
     }
 }
