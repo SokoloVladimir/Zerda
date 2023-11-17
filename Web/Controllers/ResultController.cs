@@ -284,6 +284,65 @@ namespace Web.Controllers
         }
         #endregion
 
+        #region PATCH
+        /// <summary>
+        /// Setting task value by task number
+        /// </summary>
+        /// <response code="200">Never return</response>
+        /// <response code="204">Success update</response>
+        /// <response code="404">Couldn't create object before put (state unchanged)</response>
+        /// <returns></returns>
+        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [HttpPatch("{userId}/{workId}/{taskNumber}/{value}")]
+        public async Task<IActionResult> Patch([Required] int userId, [Required] int workId, [Required] int taskNumber, [Required] int value)
+        {
+            try
+            {
+                await PatchData(userId, workId, taskNumber, value);
+                return StatusCode(204);
+            }
+            catch (DbUpdateException ex)
+            {
+                if (ex.InnerException?.Message.Contains("Cannot add or update a child row") == true)
+                {
+                    return StatusCode(404, "Not such work or user");
+                }
+                return StatusCode(500, "DbUpdateException");
+            }
+            catch
+            {
+                return StatusCode(500);
+            }
+        }
+
+        private async Task PatchData(int userId, int workId, int bitN, int value)
+        {
+            Result? result = await _dbContext.Result.FirstOrDefaultAsync(x => x.UserId == userId && x.WorkId == workId);
+            Work work = await _dbContext.Work.FirstAsync(x => x.Id == workId);
+
+            if (result is null)
+            {
+                result = new Result()
+                {
+                    UserId = userId,
+                    WorkId = workId,
+                };
+
+                _dbContext.Result.Add(result);
+            }
+            if (Convert.ToBoolean(value))
+            {
+                result.Tasks |= ((ulong)1) << (bitN - 1);
+            } 
+            else
+            {
+                result.Tasks &= ~(((ulong)1) << (bitN - 1));
+            }
+            
+            await _dbContext.SaveChangesAsync();
+        }
+        #endregion 
+
         #region DELETE
         /// <summary>
         /// Deleting object
