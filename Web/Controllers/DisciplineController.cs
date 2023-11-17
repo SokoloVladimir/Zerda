@@ -72,6 +72,38 @@ namespace Web.Controllers
         }
 
         /// <summary>
+        /// Updating object
+        /// </summary>
+        /// <response code="200">Never return</response>
+        /// <response code="201">Success adding</response>
+        /// <response code="204">Duplicate object (state unchanged)</response>
+        /// <returns>Updated object</returns>
+        [ProducesResponseType(typeof(Discipline), (int)HttpStatusCode.Created)]
+        [HttpPut()]
+        public async Task<IActionResult> Put([FromBody] Discipline obj)
+        {
+            try
+            {                
+                _dbContext.Entry(obj).State = EntityState.Modified;
+                await _dbContext.SaveChangesAsync();
+                return StatusCode(201, obj);
+            }
+            catch (DbUpdateException ex)
+            {
+                if (ex.InnerException is MySqlConnector.MySqlException && ex.InnerException.Message.Contains("Duplicate entry"))
+                {
+                    _logger.LogWarning("Попытка добавления дубликата");
+                    return StatusCode(204);
+                }
+                return StatusCode(500, "DbException");
+            }
+            catch
+            {
+                return StatusCode(500);
+            }
+        }
+
+        /// <summary>
         /// Deleting object
         /// </summary>
         /// <param name="id">required id</param>
