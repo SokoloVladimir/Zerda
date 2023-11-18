@@ -1,17 +1,17 @@
-﻿using Data.Context;
+﻿using Asp.Versioning;
+using Data.Context;
 using Data.Model;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections;
 using System.ComponentModel.DataAnnotations;
-using System.Data.Common;
 using System.Net;
-using System.Runtime.InteropServices;
 
-namespace Web.Controllers
+namespace Web.Controllers.V1
 {
     [ApiController]
-    [Route("[controller]")]
+    [ApiVersion("1.0")]
+    [Route("api/v1/[controller]")]
     public class ResultController : ControllerBase
     {
         private readonly ILogger<ResultController> _logger;
@@ -26,16 +26,16 @@ namespace Web.Controllers
 
         #region GET
         /// <summary>
-        /// Get results by student id тест
+        /// Метод на получение результатов
         /// </summary>
-        /// <param name="studentId">student Id</param>
-        /// <param name="workId">work Id</param>
-        /// <param name="disciplineId">discipline Id</param>
-        /// <param name="groupId">group Id</param>
-        /// <param name="limit">count records to get (max 50)</param>
-        /// <param name="offset">starting position relative to the beginning of the table</param>
-        /// <returns>List of objects</returns>
-        /// <response code="200">Success</response>
+        /// <param name="studentId">фильтрация по студенту</param>
+        /// <param name="workId">фильтрация по работе</param>
+        /// <param name="disciplineId">фильтрация по дисциплине</param>
+        /// <param name="groupId">фильтрация по группе</param>
+        /// <param name="limit">количество записей (до 50)</param>
+        /// <param name="offset">смещение относительно начала таблицы</param>
+        /// <returns>список объектов</returns>
+        /// <response code="200">Успех</response>
         [ProducesResponseType(typeof(IEnumerable<Result>), (int)HttpStatusCode.OK)]
         [HttpGet()]
         public async Task<IActionResult> GetByStudentId(
@@ -59,7 +59,7 @@ namespace Web.Controllers
                 .Skip(offset)
                 .Take(Math.Min(limit, 50))
                 .Select(x => new
-                { 
+                {
                     x.StudentId,
                     x.WorkId,
                     Tasks = UnsetBitsAfterN(x.Tasks, (uint)x.Work.TaskCount),
@@ -70,16 +70,16 @@ namespace Web.Controllers
         }
 
         /// <summary>
-        /// Get results by student id for kirill
+        /// Метод на получение результатов как массив бит
         /// </summary>
-        /// <param name="studentId">student Id</param>
-        /// <param name="workId">work Id</param>
-        /// <param name="disciplineId">discipline Id</param>
-        /// <param name="groupId">group Id</param>
-        /// <param name="limit">count records to get (max 50)</param>
-        /// <param name="offset">starting position relative to the beginning of the table</param>
-        /// <returns>List of objects</returns>
-        /// <response code="200">Success</response>
+        /// <param name="studentId">фильтрация по студенту</param>
+        /// <param name="workId">фильтрация по работе</param>
+        /// <param name="disciplineId">фильтрация по дисциплине</param>
+        /// <param name="groupId">фильтрация по группе</param>
+        /// <param name="limit">количество записей (до 50)</param>
+        /// <param name="offset">смещение относительно начала таблицы</param>
+        /// <returns>список объектов</returns>
+        /// <response code="200">Успех</response>
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [HttpGet("withBitArray")]
         public async Task<IActionResult> GetByStudentIdBitArray(
@@ -116,12 +116,18 @@ namespace Web.Controllers
 
         #region POST
         /// <summary>
-        /// Setting tasks value
-        /// </summary>
-        /// <response code="200">Never return</response>
-        /// <response code="204">Success update</response>
-        /// <response code="404">Couldn't create object before post (state unchanged)</response>
-        /// <returns></returns>
+        /// Установка значения результата
+        /// </summary>      
+        /// <remarks>
+        /// Точно устанавливает значения бит заданий. Биты отсчитываются от младшего (1 задание) к старшему. Активный бит означает выполненное задание.
+        /// </remarks>
+        /// <param name="studentId">студент</param>
+        /// <param name="workId">работа</param>
+        /// <param name="value">значения бит заданий упакованные в ULong число</param>
+        /// <returns>ответ</returns>
+        /// <response code="200">Не возвращается для этого метода</response>
+        /// <response code="204">Успешное создание</response>
+        /// <response code="404">Не найден родительский объект (status quo)</response>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [HttpPost("{studentId}/{workId}/{value}")]
         public async Task<IActionResult> Post([Required] int studentId, [Required] int workId, [Required] uint value)
@@ -146,12 +152,18 @@ namespace Web.Controllers
         }
 
         /// <summary>
-        /// Setting tasks value from body
+        /// Установка значения результата из тела
         /// </summary>
-        /// <response code="200">Never return</response>
-        /// <response code="204">Success update</response>
-        /// <response code="404">Couldn't create object before post (state unchanged)</response>
-        /// <returns></returns>
+        /// <remarks>
+        /// Точно устанавливает значения бит заданий. За счёт этого использовать с осторожностью.
+        /// Биты отсчитываются от младшего (1 задание) к старшему. Активный бит означает выполненное задание.         
+        /// </remarks>
+        /// <param name="studentId">студент</param>
+        /// <param name="workId">работа</param>
+        /// <returns>ответ</returns>
+        /// <response code="200">Не возвращается для этого метода</response>
+        /// <response code="204">Успешное создание</response>
+        /// <response code="404">Не найден родительский объект (status quo)</response>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [HttpPost("{studentId}/{workId}")]
         public async Task<IActionResult> PostByJson([Required] int studentId, [Required] int workId, [FromBody] int[] values)
@@ -201,14 +213,20 @@ namespace Web.Controllers
 
         #region PUT
         /// <summary>
-        /// Adding (logical disjunction) tasks value
-        /// </summary>
-        /// <response code="200">Never return</response>
-        /// <response code="204">Success update</response>
-        /// <response code="404">Couldn't create object before put (state unchanged)</response>
-        /// <returns></returns>
-        [ProducesResponseType((int)HttpStatusCode.NoContent)]        
-        [HttpPut("{studentId}/{workId}/{value}")]        
+        /// Добавление к результату значения
+        /// </summary>      
+        /// <remarks>
+        /// Применяет к результату заданий дизъюнкцию (логическое сложение) отправленного значения. Безопасный метод. 
+        /// </remarks>       
+        /// <param name="studentId">студент</param>
+        /// <param name="workId">работа</param>
+        /// <param name="value">значения бит заданий упакованные в ULong число</param>
+        /// <returns>ответ</returns>
+        /// <response code="200">Не возвращается для этого метода</response>
+        /// <response code="204">Успешное обновление</response>
+        /// <response code="404">Не найден родительский объект (status quo)</response>
+        [ProducesResponseType((int)HttpStatusCode.NoContent)]
+        [HttpPut("{studentId}/{workId}/{value}")]
         public async Task<IActionResult> Put([Required] int studentId, [Required] int workId, [Required] ulong value)
         {
             try
@@ -231,18 +249,23 @@ namespace Web.Controllers
         }
 
         /// <summary>
-        /// Adding (logical disjunction) tasks value from body
-        /// </summary>
-        /// <response code="200">Never return</response>
-        /// <response code="204">Success update</response>
-        /// <response code="404">Couldn't create object before put (state unchanged)</response>
-        /// <returns></returns>
+        /// Добавление к результату значения из тела
+        /// </summary>      
+        /// <remarks>
+        /// Применяет к результату заданий дизъюнкцию (логическое сложение) отправленного значения. Безопасный метод.
+        /// </remarks>       
+        /// <param name="studentId">студент</param>
+        /// <param name="workId">работа</param>
+        /// <returns>ответ</returns>
+        /// <response code="200">Не возвращается для этого метода</response>
+        /// <response code="204">Успешное обновление</response>
+        /// <response code="404">Не найден родительский объект (status quo)</response>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [HttpPut("{studentId}/{workId}")]
         public async Task<IActionResult> PutByJson([Required] int studentId, [Required] int workId, [FromBody] int[] values)
         {
             try
-            {                
+            {
                 await PutData(studentId, workId, BitArrayToInt(
                     new BitArray(
                         values.Select(Convert.ToBoolean).ToArray())
@@ -286,12 +309,19 @@ namespace Web.Controllers
 
         #region PATCH
         /// <summary>
-        /// Setting task value by task number
-        /// </summary>
-        /// <response code="200">Never return</response>
-        /// <response code="204">Success update</response>
-        /// <response code="404">Couldn't create object before put (state unchanged)</response>
-        /// <returns></returns>
+        /// Установка состояния конкретного задания
+        /// </summary>      
+        /// <remarks>
+        /// Выбивает или активирует соответсвующий бит. Безопасный метод. 
+        /// </remarks>       
+        /// <param name="studentId">студент</param>
+        /// <param name="workId">работа</param>
+        /// <param name="taskNumber">номер задания (от 1)</param>
+        /// <param name="value">значение 0/1</param>
+        /// <returns>ответ</returns>
+        /// <response code="200">Не возвращается для этого метода</response>
+        /// <response code="204">Успешное обновление</response>
+        /// <response code="404">Не найден родительский объект (status quo)</response>
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [HttpPatch("{studentId}/{workId}/{taskNumber}/{value}")]
         public async Task<IActionResult> Patch([Required] int studentId, [Required] int workId, [Required] int taskNumber, [Required] int value)
@@ -332,28 +362,28 @@ namespace Web.Controllers
             }
             if (Convert.ToBoolean(value))
             {
-                result.Tasks |= ((ulong)1) << (bitN - 1);
-            } 
+                result.Tasks |= (ulong)1 << bitN - 1;
+            }
             else
             {
-                result.Tasks &= ~(((ulong)1) << (bitN - 1));
+                result.Tasks &= ~((ulong)1 << bitN - 1);
             }
-            
+
             await _dbContext.SaveChangesAsync();
         }
-        #endregion 
+        #endregion
 
         #region DELETE
         /// <summary>
-        /// Deleting object
-        /// </summary>
-        /// <param name="studentId">Student's id</param>
-        /// <param name="workId">Work's id</param>
-        /// <returns>response</returns>
-        /// <response code="200">Never return</response>
-        /// <response code="204">Success delete</response>
-        /// <response code="404">Couldn't find obj (state unchanched)</response>
-        /// <response code="409">Couldn't delete relationship (state unchanched)</response>
+        /// Удаление результата
+        /// </summary>          
+        /// <param name="studentId">студент</param>
+        /// <param name="workId">работа</param>
+        /// <returns>ответ</returns>
+        /// <response code="200">Не возвращается для этого метода</response>
+        /// <response code="204">Успешное удаление</response>
+        /// <response code="404">Объект для удаления не найден (status quo)</response>
+        /// <response code="409">Существует некаскадная связь (status quo)</response>
         [HttpDelete("{studentId}/{workId}")]
         public async Task<IActionResult> Delete(int studentId, int workId)
         {

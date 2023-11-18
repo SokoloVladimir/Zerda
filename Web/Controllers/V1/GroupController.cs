@@ -1,69 +1,63 @@
-﻿using Data.Context;
+﻿using Asp.Versioning;
+using Data.Context;
 using Data.Model;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
 
-namespace Web.Controllers
+namespace Web.Controllers.V1
 {
     [ApiController]
-    [Route("[controller]")]
-    public class WorkController : ControllerBase
+    [ApiVersion("1.0")]
+    [Route("api/v1/[controller]")]
+    public class GroupController : ControllerBase
     {
-        private readonly ILogger<WorkController> _logger;
+        private readonly ILogger<GroupController> _logger;
 
         private readonly ZerdaContext _dbContext;
 
-        public WorkController(ILogger<WorkController> logger, ZerdaContext dbContext)
+        public GroupController(ILogger<GroupController> logger, ZerdaContext dbContext)
         {
             _logger = logger;
             _dbContext = dbContext;
         }
 
+        #region GET
         /// <summary>
-        /// Get request
+        /// Метод на получение групп
         /// </summary>
-        /// <param name="disciplineId">discipline Id</param>
-        /// <param name="workTypeId">workType id</param>
-        /// <param name="limit">count records to get (max 50)</param>
-        /// <param name="offset">starting position relative to the beginning of the table</param>
-        /// <returns>List of objects</returns>
-        /// <response code="200">Success</response>
-        [ProducesResponseType(typeof(IEnumerable<Work>), (int)HttpStatusCode.OK)]
+        /// <param name="limit">количество записей (до 50)</param>
+        /// <param name="offset">смещение относительно начала таблицы</param>
+        /// <returns>список объектов</returns>
+        /// <response code="200">Успех</response>
+        [ProducesResponseType(typeof(IEnumerable<Group>), (int)HttpStatusCode.OK)]
         [HttpGet()]
-        public async Task<IActionResult> Get(
-            int? disciplineId = null,
-            int? workTypeId = null,
-            int limit = 50, 
-            int offset = 0
-            )
+        public async Task<IActionResult> Get(int limit = 50, int offset = 0)
         {
-            return StatusCode(200, await _dbContext.Work
+            return StatusCode(200, await _dbContext.Group
                 .AsNoTracking()
-                .Include(x => x.Discipline)        
-                .Include(x => x.WorkType)
-                .Where(x => disciplineId == null || x.DisciplineId == disciplineId)
-                .Where(x => workTypeId == null || x.WorkTypeId == workTypeId)
                 .OrderBy(x => x.Id)
                 .Skip(offset)
                 .Take(Math.Min(limit, 50))
                 .ToListAsync());
         }
+        #endregion
 
+        #region POST
         /// <summary>
-        /// Adding object
+        /// Добавление группы
         /// </summary>
-        /// <response code="200">Never return</response>
-        /// <response code="201">Success adding</response>
-        /// <response code="204">Duplicate object (state unchanged)</response>
-        /// <returns>Created object</returns>
-        [ProducesResponseType(typeof(Work), (int)HttpStatusCode.Created)]
+        /// <response code="200">Не возвращается для этого метода</response>
+        /// <response code="201">Успешное добавление</response>
+        /// <response code="204">Попытка добавления дубликата (status quo)</response>
+        /// <returns>Созданный объект</returns>
+        [ProducesResponseType(typeof(Group), (int)HttpStatusCode.Created)]
         [HttpPost()]
-        public async Task<IActionResult> Post([FromBody] Work obj)
+        public async Task<IActionResult> Post([FromBody] Group obj)
         {
             try
             {
-                await _dbContext.Work.AddAsync(obj);
+                await _dbContext.Group.AddAsync(obj);
                 await _dbContext.SaveChangesAsync();
                 return StatusCode(201, obj);
             }
@@ -81,22 +75,24 @@ namespace Web.Controllers
                 return StatusCode(500);
             }
         }
+        #endregion
 
+        #region DELETE
         /// <summary>
-        /// Deleting object
+        /// Удаление группы
         /// </summary>
-        /// <param name="id">required id</param>
-        /// <returns>response</returns>
-        /// <response code="200">Never return</response>
-        /// <response code="204">Success delete</response>
-        /// <response code="404">Couldn't find obj (state unchanched)</response>
-        /// <response code="409">Couldn't delete relationship (state unchanched)</response>
+        /// <param name="id">идентификатор объекта</param>
+        /// <returns>HTTP ответ</returns>
+        /// <response code="200">Не возвращается для этого метода</response>
+        /// <response code="204">Успешное удаление</response>
+        /// <response code="404">Объект для удаления не найден (status quo)</response>
+        /// <response code="409">Существует некаскадная связь (status quo)</response>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             try
             {
-                Work? obj = _dbContext.Work.FirstOrDefault(x => x.Id == id);
+                Group? obj = _dbContext.Group.FirstOrDefault(x => x.Id == id);
                 if (obj is null)
                 {
                     return NotFound();
@@ -124,5 +120,6 @@ namespace Web.Controllers
             }
 
         }
+        #endregion
     }
 }

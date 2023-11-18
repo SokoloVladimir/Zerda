@@ -1,61 +1,70 @@
+using Asp.Versioning;
 using Data.Context;
 using Data.Model;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.ComponentModel.DataAnnotations;
 using System.Net;
-using System.Security.Claims;
 
-namespace Web.Controllers
+namespace Web.Controllers.V1
 {
     [ApiController]
-    [Route("[controller]")]
-    public class AccountController : ControllerBase
+    [ApiVersion("1.0")]
+    [Route("api/v1/[controller]")]
+    public class StudentController : ControllerBase
     {
-        private readonly ILogger<AccountController> _logger;
+        private readonly ILogger<StudentController> _logger;
 
         private readonly ZerdaContext _dbContext;
 
-        public AccountController(ILogger<AccountController> logger, ZerdaContext dbContext)
+        public StudentController(ILogger<StudentController> logger, ZerdaContext dbContext)
         {
             _logger = logger;
             _dbContext = dbContext;
         }
 
+        #region GET
         /// <summary>
-        /// Get request
+        /// Метод на получение студентов
         /// </summary>
-        /// <param name="limit">count records to get (max 50)</param>
-        /// <param name="offset">starting position relative to the beginning of the table</param>
-        /// <returns>List of objects</returns>
-        /// <response code="200">Success</response>
-        [ProducesResponseType(typeof(IEnumerable<Account>), (int)HttpStatusCode.OK)]
+        /// <param name="groupId">фильтрация по группам</param>
+        /// <param name="limit">количество записей (до 50)</param>
+        /// <param name="offset">смещение относительно начала таблицы</param>
+        /// <returns>список объектов</returns>
+        /// <response code="200">Успех</response>
+        [ProducesResponseType(typeof(IEnumerable<Student>), (int)HttpStatusCode.OK)]
         [HttpGet()]
-        public async Task<IActionResult> Get(int limit = 50, int offset = 0)
+        public async Task<IActionResult> Get(
+            int? groupId = null,
+            int limit = 50,
+            int offset = 0)
         {
-            return StatusCode(200, await _dbContext.Account
+            return StatusCode(200, await _dbContext.Student
+                .Include(x => x.Account)
+                .Include(x => x.Group)
+                .Where(x => groupId == null || x.GroupId == groupId)
                 .AsNoTracking()
                 .OrderBy(x => x.Id)
                 .Skip(offset)
                 .Take(Math.Min(limit, 50))
                 .ToListAsync());
         }
+        #endregion
 
+        #region POST
         /// <summary>
-        /// Adding object
+        /// Добавление студента
         /// </summary>
-        /// <response code="200">Never return</response>
-        /// <response code="201">Success adding</response>
-        /// <response code="204">Duplicate object (state unchanged)</response>
-        /// <returns>Created object</returns>
-        [ProducesResponseType(typeof(Account), (int)HttpStatusCode.Created)]
+        /// <response code="200">Не возвращается для этого метода</response>
+        /// <response code="201">Успешное добавление</response>
+        /// <response code="204">Попытка добавления дубликата (status quo)</response>
+        /// <returns>Созданный объект</returns>
+        [ProducesResponseType(typeof(Student), (int)HttpStatusCode.Created)]
         [HttpPost()]
-        public async Task<IActionResult> Post([FromBody] Account obj)
+        public async Task<IActionResult> Post([FromBody] Student obj)
         {
             try
             {
-                await _dbContext.Account.AddAsync(obj);
+                await _dbContext.Student.AddAsync(obj);
                 await _dbContext.SaveChangesAsync();
                 return StatusCode(201, obj);
             }
@@ -73,22 +82,24 @@ namespace Web.Controllers
                 return StatusCode(500);
             }
         }
+        #endregion
 
+        #region DELETE
         /// <summary>
-        /// Deleting object
+        /// Удаление аккаунта
         /// </summary>
-        /// <param name="id">required id</param>
-        /// <returns>response</returns>
-        /// <response code="200">Never return</response>
-        /// <response code="204">Success delete</response>
-        /// <response code="404">Couldn't find obj (state unchanched)</response>
-        /// <response code="409">Couldn't delete relationship (state unchanched)</response>
+        /// <param name="id">идентификатор объекта</param>
+        /// <returns>HTTP ответ</returns>
+        /// <response code="200">Не возвращается для этого метода</response>
+        /// <response code="204">Успешное удаление</response>
+        /// <response code="404">Объект для удаления не найден (status quo)</response>
+        /// <response code="409">Существует некаскадная связь (status quo)</response>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             try
             {
-                Account? obj = _dbContext.Account.FirstOrDefault(x => x.Id == id);
+                Student? obj = _dbContext.Student.FirstOrDefault(x => x.Id == id);
                 if (obj is null)
                 {
                     return NotFound();
@@ -116,5 +127,6 @@ namespace Web.Controllers
             }
 
         }
+        #endregion
     }
 }

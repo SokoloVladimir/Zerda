@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using Data.Context;
 using Data.Model;
 using Microsoft.AspNetCore.Authorization;
@@ -5,10 +6,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
 
-namespace Web.Controllers
+namespace Web.Controllers.V1
 {
     [ApiController]
-    [Route("[controller]")]    
+    [ApiVersion("1.0")]
+    [Route("api/v1/[controller]")]
     public class WorkTypeController : ControllerBase
     {
         private readonly ILogger<WorkTypeController> _logger;
@@ -21,32 +23,35 @@ namespace Web.Controllers
             _dbContext = dbContext;
         }
 
+        #region GET
         /// <summary>
-        /// Get request
+        /// Метод на получение типов работ
         /// </summary>
-        /// <param name="limit">count records to get (max 50)</param>
-        /// <param name="offset">starting position relative to the beginning of the table</param>
-        /// <returns>List of objects</returns>
-        /// <response code="200">Success</response>
+        /// <param name="limit">количество записей (до 50)</param>
+        /// <param name="offset">смещение относительно начала таблицы</param>
+        /// <returns>список объектов</returns>
+        /// <response code="200">Успех</response>
         [ProducesResponseType(typeof(IEnumerable<WorkType>), (int)HttpStatusCode.OK)]
         [HttpGet()]
         public async Task<IActionResult> Get(int limit = 50, int offset = 0)
         {
-            return StatusCode(200,await _dbContext.WorkType
+            return StatusCode(200, await _dbContext.WorkType
                 .AsNoTracking()
                 .OrderBy(x => x.Id)
                 .Skip(offset)
                 .Take(Math.Min(limit, 50))
                 .ToListAsync());
         }
+        #endregion
 
+        #region POST
         /// <summary>
-        /// Adding object
+        /// Добавление типа работы
         /// </summary>
-        /// <response code="200">Never return</response>
-        /// <response code="201">Success adding</response>
-        /// <response code="204">Duplicate object (state unchanged)</response>
-        /// <returns>Created object</returns>
+        /// <response code="200">Не возвращается для этого метода</response>
+        /// <response code="201">Успешное добавление</response>
+        /// <response code="204">Попытка добавления дубликата (status quo)</response>
+        /// <returns>Созданный объект</returns>
         [ProducesResponseType(typeof(WorkType), (int)HttpStatusCode.Created)]
         [HttpPost()]
         public async Task<IActionResult> Post([FromBody] WorkType obj)
@@ -69,21 +74,23 @@ namespace Web.Controllers
             catch
             {
                 return StatusCode(500);
-            }            
+            }
         }
+        #endregion
 
+        #region DELETE
         /// <summary>
-        /// Deleting object
+        /// Удаление аккаунта
         /// </summary>
-        /// <param name="id">required id</param>
-        /// <returns>response</returns>
-        /// <response code="200">Never return</response>
-        /// <response code="204">Success delete</response>
-        /// <response code="404">Couldn't find obj (state unchanched)</response>
-        /// <response code="409">Couldn't delete relationship (state unchanched)</response>
+        /// <param name="id">идентификатор объекта</param>
+        /// <returns>HTTP ответ</returns>
+        /// <response code="200">Не возвращается для этого метода</response>
+        /// <response code="204">Успешное удаление</response>
+        /// <response code="404">Объект для удаления не найден (status quo)</response>
+        /// <response code="409">Существует некаскадная связь (status quo)</response>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
-        { 
+        {
             try
             {
                 WorkType? obj = _dbContext.WorkType.FirstOrDefault(x => x.Id == id);
@@ -100,7 +107,7 @@ namespace Web.Controllers
             }
             catch (DbUpdateException ex)
             {
-                if (ex.InnerException is MySqlConnector.MySqlException 
+                if (ex.InnerException is MySqlConnector.MySqlException
                     && ex.InnerException.Message.Contains("Cannot delete or update a parent row"))
                 {
                     _logger.LogWarning("Попытка удаления связанной записи");
@@ -112,7 +119,8 @@ namespace Web.Controllers
             {
                 return StatusCode(500);
             }
-            
+
         }
+        #endregion
     }
 }

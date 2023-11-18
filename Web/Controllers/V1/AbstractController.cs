@@ -8,9 +8,9 @@ using System.Linq.Expressions;
 using System.Net;
 using System.Reflection;
 
-namespace Web.Controllers
+namespace Web.Controllers.V1
 {
-    
+
     public abstract class AbstractController<T> : ControllerBase where T : class
     {
         protected readonly ILogger<AbstractController<T>> _logger;
@@ -35,7 +35,7 @@ namespace Web.Controllers
         virtual public async Task<IActionResult> Get(int limit = 50, int offset = 0)
         {
             List<T> list = GetData<T>(limit, offset).Result!;
-            return (list is not null) ? StatusCode(200, list) : StatusCode(404);
+            return list is not null ? StatusCode(200, list) : StatusCode(404);
         }
 
         protected async Task<List<T>?> GetData<T>(int limit, int offset) where T : class
@@ -59,7 +59,7 @@ namespace Web.Controllers
         virtual public async Task<IActionResult> Post([FromBody] T obj)
         {
             try
-            {                
+            {
                 await _dbContext.AddAsync(obj);
                 await _dbContext.SaveChangesAsync();
                 return StatusCode(201, obj);
@@ -76,13 +76,13 @@ namespace Web.Controllers
             catch
             {
                 return StatusCode(500);
-            }            
-        }     
+            }
+        }
 
         protected int DeleteData(T? obj)
         {
             try
-            {            
+            {
                 if (obj is null)
                 {
                     return 404;
@@ -96,7 +96,7 @@ namespace Web.Controllers
             }
             catch (DbUpdateException ex)
             {
-                if (ex.InnerException is MySqlConnector.MySqlException 
+                if (ex.InnerException is MySqlConnector.MySqlException
                     && ex.InnerException.Message.Contains("Cannot delete or update a parent row"))
                 {
                     _logger.LogWarning("Попытка удаления связанной записи");
@@ -108,7 +108,7 @@ namespace Web.Controllers
             {
                 return 500;
             }
-            
+
         }
     }
 }

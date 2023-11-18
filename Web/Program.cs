@@ -1,5 +1,8 @@
+using Asp.Versioning;
+using Asp.Versioning.ApiExplorer;
 using Data;
 using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Web
 {
@@ -15,16 +18,21 @@ namespace Web
             builder.Services.AddSingleton(configurator);
 
             builder.Services.AddControllers();
+            builder.Services.AddApiVersioning(setup =>
+            {
+                setup.DefaultApiVersion = new ApiVersion(1, 0);
+                setup.AssumeDefaultVersionWhenUnspecified = true;
+                setup.ReportApiVersions = true;
+            }).AddApiExplorer(setup =>
+            {
+                setup.GroupNameFormat = "'v'VVV";
+                setup.SubstituteApiVersionInUrl = true;
+            });            
+            
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(options =>
-            {
-                options.SwaggerDoc("v1", new OpenApiInfo
-                {
-                    Version = "v1",
-                    Title = configurator.ApplicationName,
-                    Description = "RESTful API 'Zerda' component of 'Vulpes' software"
-                });
-                options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "Web.xml"));
+            {        
+                options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "Web.xml"));                
 
                 options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
@@ -51,15 +59,21 @@ namespace Web
                     }
                 });
             });
-
+            builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
             var app = builder.Build();
 
             if (app.Environment.IsDevelopment() || true)
             {
-                app.UseSwagger();
-                app.UseSwaggerUI(o =>
+                app.UseSwagger();                
+                app.UseSwaggerUI(options =>
                 {
-                    o.DocumentTitle = configurator.ApplicationName;
+                    foreach (var description in app.Services.GetRequiredService<IApiVersionDescriptionProvider>().ApiVersionDescriptions)
+                    {
+                        options.SwaggerEndpoint(
+                            $"/swagger/{description.GroupName}/swagger.json",
+                            description.GroupName.ToUpperInvariant()
+                        );
+                    }
                 });
             }
 
