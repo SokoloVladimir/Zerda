@@ -2,14 +2,13 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 
 namespace Data.Model;
 
 [Index("AccountId", Name = "AccountId_UNIQUE", IsUnique = true)]
 [Index("GroupId", Name = "Group_FK")]
-public partial class User
+public partial class Student
 {
     /// <summary>
     /// Идентификатор пользователя
@@ -51,14 +50,13 @@ public partial class User
     public sbyte IsDarkTheme { get; set; }
 
     [ForeignKey("AccountId")]
-    [InverseProperty("User")]
+    [InverseProperty("Student")]
     public virtual Account? Account { get; set; }
 
     [ForeignKey("GroupId")]
-    [InverseProperty("User")]
+    [InverseProperty("Student")]
     public virtual Group Group { get; set; } = null!;
 
-    [JsonIgnore]
-    [InverseProperty("User")]
+    [InverseProperty("Student")]
     public virtual ICollection<Result> Result { get; } = new List<Result>();
 }

@@ -24,7 +24,7 @@ public partial class ZerdaContext : DbContext
 
     public virtual DbSet<Result> Result { get; set; }
 
-    public virtual DbSet<User> User { get; set; }
+    public virtual DbSet<Student> Student { get; set; }
 
     public virtual DbSet<Work> Work { get; set; }
 
@@ -67,26 +67,26 @@ public partial class ZerdaContext : DbContext
 
         modelBuilder.Entity<Result>(entity =>
         {
-            entity.HasKey(e => new { e.UserId, e.WorkId })
+            entity.HasKey(e => new { e.StudentId, e.WorkId })
                 .HasName("PRIMARY")
                 .HasAnnotation("MySql:IndexPrefixLength", new[] { 0, 0 });
 
-            entity.Property(e => e.UserId).HasComment("Идентификатор пользователя");
+            entity.Property(e => e.StudentId).HasComment("Идентификатор пользователя");
             entity.Property(e => e.WorkId).HasComment("Идентификатор работы");
             entity.Property(e => e.Tasks)
                 .HasDefaultValueSql("b'0'")
                 .HasComment("Массив бит для обозначения выполненных работ");
 
-            entity.HasOne(d => d.User).WithMany(p => p.Result)
+            entity.HasOne(d => d.Student).WithMany(p => p.Result)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("fk_Work_has_Student_Student1");
+                .HasConstraintName("Student_Result_FK");
 
             entity.HasOne(d => d.Work).WithMany(p => p.Result)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("fk_Work_has_Student_Work1");
+                .HasConstraintName("Work_Result_FK");
         });
 
-        modelBuilder.Entity<User>(entity =>
+        modelBuilder.Entity<Student>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PRIMARY");
 
@@ -98,11 +98,11 @@ public partial class ZerdaContext : DbContext
             entity.Property(e => e.Name).HasComment("Имя");
             entity.Property(e => e.Surname).HasComment("Фамилия");
 
-            entity.HasOne(d => d.Account).WithOne(p => p.User).HasConstraintName("Account_User_FK");
+            entity.HasOne(d => d.Account).WithOne(p => p.Student).HasConstraintName("Account_Student_FK");
 
-            entity.HasOne(d => d.Group).WithMany(p => p.User)
+            entity.HasOne(d => d.Group).WithMany(p => p.Student)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("Group_User_FK");
+                .HasConstraintName("Group_Student_FK");
         });
 
         modelBuilder.Entity<Work>(entity =>

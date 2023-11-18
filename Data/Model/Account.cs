@@ -31,5 +31,5 @@ public partial class Account
 
     [JsonIgnore]
     [InverseProperty("Account")]
-    public virtual User? User { get; set; }
+    public virtual Student? Student { get; set; }
 }

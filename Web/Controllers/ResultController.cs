@@ -26,9 +26,9 @@ namespace Web.Controllers
 
         #region GET
         /// <summary>
-        /// Get results by user id
+        /// Get results by student id тест
         /// </summary>
-        /// <param name="userId">user Id</param>
+        /// <param name="studentId">student Id</param>
         /// <param name="workId">work Id</param>
         /// <param name="disciplineId">discipline Id</param>
         /// <param name="groupId">group Id</param>
@@ -38,8 +38,8 @@ namespace Web.Controllers
         /// <response code="200">Success</response>
         [ProducesResponseType(typeof(IEnumerable<Result>), (int)HttpStatusCode.OK)]
         [HttpGet()]
-        public async Task<IActionResult> GetByUserId(
-            int? userId = null,
+        public async Task<IActionResult> GetByStudentId(
+            int? studentId = null,
             int? workId = null,
             int? disciplineId = null,
             int? groupId = null,
@@ -50,17 +50,17 @@ namespace Web.Controllers
             return StatusCode(200, await _dbContext.Result
                 .AsNoTracking()
                 .Include(x => x.Work).ThenInclude(x => x.Discipline)
-                .Include(x => x.User).ThenInclude(x => x.Group)
-                .Where(x => userId == null || x.UserId == userId)
+                .Include(x => x.Student).ThenInclude(x => x.Group)
+                .Where(x => studentId == null || x.StudentId == studentId)
                 .Where(x => workId == null || x.WorkId == workId)
                 .Where(x => disciplineId == null || x.Work.DisciplineId == disciplineId)
-                .Where(x => groupId == null || x.User.Group.Id == groupId)
-                .OrderBy(x => x.UserId).ThenBy(x => x.WorkId)
+                .Where(x => groupId == null || x.Student.Group.Id == groupId)
+                .OrderBy(x => x.StudentId).ThenBy(x => x.WorkId)
                 .Skip(offset)
                 .Take(Math.Min(limit, 50))
                 .Select(x => new
                 { 
-                    x.UserId,
+                    x.StudentId,
                     x.WorkId,
                     Tasks = UnsetBitsAfterN(x.Tasks, (uint)x.Work.TaskCount),
                     WorkTaskCount = x.Work.TaskCount
@@ -70,9 +70,9 @@ namespace Web.Controllers
         }
 
         /// <summary>
-        /// Get results by user id for kirill
+        /// Get results by student id for kirill
         /// </summary>
-        /// <param name="userId">user Id</param>
+        /// <param name="studentId">student Id</param>
         /// <param name="workId">work Id</param>
         /// <param name="disciplineId">discipline Id</param>
         /// <param name="groupId">group Id</param>
@@ -82,8 +82,8 @@ namespace Web.Controllers
         /// <response code="200">Success</response>
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [HttpGet("withBitArray")]
-        public async Task<IActionResult> GetByUserIdBitArray(
-            int? userId = null,
+        public async Task<IActionResult> GetByStudentIdBitArray(
+            int? studentId = null,
             int? workId = null,
             int? disciplineId = null,
             int? groupId = null,
@@ -94,17 +94,17 @@ namespace Web.Controllers
             return StatusCode(200, await _dbContext.Result
                 .AsNoTracking()
                 .Include(x => x.Work).ThenInclude(x => x.Discipline)
-                .Include(x => x.User).ThenInclude(x => x.Group)
-                .Where(x => userId == null || x.UserId == userId)
+                .Include(x => x.Student).ThenInclude(x => x.Group)
+                .Where(x => studentId == null || x.StudentId == studentId)
                 .Where(x => workId == null || x.WorkId == workId)
                 .Where(x => disciplineId == null || x.Work.DisciplineId == disciplineId)
-                .Where(x => groupId == null || x.User.Group.Id == groupId)
-                .OrderBy(x => x.UserId).ThenBy(x => x.WorkId)
+                .Where(x => groupId == null || x.Student.Group.Id == groupId)
+                .OrderBy(x => x.StudentId).ThenBy(x => x.WorkId)
                 .Skip(offset)
                 .Take(Math.Min(limit, 50))
                 .Select(x => new
                 {
-                    x.UserId,
+                    x.StudentId,
                     x.WorkId,
                     Tasks = BitArrayToIntArray(new BitArray(BitConverter.GetBytes(x.Tasks)), (uint)x.Work.TaskCount),
                     WorkTaskCount = x.Work.TaskCount
@@ -123,19 +123,19 @@ namespace Web.Controllers
         /// <response code="404">Couldn't create object before post (state unchanged)</response>
         /// <returns></returns>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
-        [HttpPost("{userId}/{workId}/{value}")]
-        public async Task<IActionResult> Post([Required] int userId, [Required] int workId, [Required] uint value)
+        [HttpPost("{studentId}/{workId}/{value}")]
+        public async Task<IActionResult> Post([Required] int studentId, [Required] int workId, [Required] uint value)
         {
             try
             {
-                await PostData(userId, workId, value);
+                await PostData(studentId, workId, value);
                 return StatusCode(204);
             }
             catch (DbUpdateException ex)
             {
                 if (ex.InnerException?.Message.Contains("Cannot add or update a child row") == true)
                 {
-                    return StatusCode(404, "Not such work or user");
+                    return StatusCode(404, "Not such work or student");
                 }
                 return StatusCode(500, "DbUpdateException");
             }
@@ -153,12 +153,12 @@ namespace Web.Controllers
         /// <response code="404">Couldn't create object before post (state unchanged)</response>
         /// <returns></returns>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
-        [HttpPost("{userId}/{workId}")]
-        public async Task<IActionResult> PostByJson([Required] int userId, [Required] int workId, [FromBody] int[] values)
+        [HttpPost("{studentId}/{workId}")]
+        public async Task<IActionResult> PostByJson([Required] int studentId, [Required] int workId, [FromBody] int[] values)
         {
             try
             {
-                await PostData(userId, workId, BitArrayToInt(
+                await PostData(studentId, workId, BitArrayToInt(
                     new BitArray(
                         values.Select(Convert.ToBoolean).ToArray())
                     )
@@ -169,7 +169,7 @@ namespace Web.Controllers
             {
                 if (ex.InnerException?.Message.Contains("Cannot add or update a child row") == true)
                 {
-                    return StatusCode(404, "Not such work or user");
+                    return StatusCode(404, "Not such work or student");
                 }
                 return StatusCode(500, "DbUpdateException");
             }
@@ -179,16 +179,16 @@ namespace Web.Controllers
             }
         }
 
-        private async Task PostData(int userId, int workId, uint value)
+        private async Task PostData(int studentId, int workId, uint value)
         {
-            Result? result = await _dbContext.Result.FirstOrDefaultAsync(x => x.UserId == userId && x.WorkId == workId);
+            Result? result = await _dbContext.Result.FirstOrDefaultAsync(x => x.StudentId == studentId && x.WorkId == workId);
             Work work = await _dbContext.Work.FirstAsync(x => x.Id == workId);
 
             if (result is null)
             {
                 result = new Result()
                 {
-                    UserId = userId,
+                    StudentId = studentId,
                     WorkId = workId,
                 };
 
@@ -208,19 +208,19 @@ namespace Web.Controllers
         /// <response code="404">Couldn't create object before put (state unchanged)</response>
         /// <returns></returns>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]        
-        [HttpPut("{userId}/{workId}/{value}")]        
-        public async Task<IActionResult> Put([Required] int userId, [Required] int workId, [Required] ulong value)
+        [HttpPut("{studentId}/{workId}/{value}")]        
+        public async Task<IActionResult> Put([Required] int studentId, [Required] int workId, [Required] ulong value)
         {
             try
             {
-                await PutData(userId, workId, value);
+                await PutData(studentId, workId, value);
                 return StatusCode(204);
             }
             catch (DbUpdateException ex)
             {
                 if (ex.InnerException?.Message.Contains("Cannot add or update a child row") == true)
                 {
-                    return StatusCode(404, "Not such work or user");
+                    return StatusCode(404, "Not such work or student");
                 }
                 return StatusCode(500, "DbUpdateException");
             }
@@ -238,12 +238,12 @@ namespace Web.Controllers
         /// <response code="404">Couldn't create object before put (state unchanged)</response>
         /// <returns></returns>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
-        [HttpPut("{userId}/{workId}")]
-        public async Task<IActionResult> PutByJson([Required] int userId, [Required] int workId, [FromBody] int[] values)
+        [HttpPut("{studentId}/{workId}")]
+        public async Task<IActionResult> PutByJson([Required] int studentId, [Required] int workId, [FromBody] int[] values)
         {
             try
             {                
-                await PutData(userId, workId, BitArrayToInt(
+                await PutData(studentId, workId, BitArrayToInt(
                     new BitArray(
                         values.Select(Convert.ToBoolean).ToArray())
                     )
@@ -254,7 +254,7 @@ namespace Web.Controllers
             {
                 if (ex.InnerException?.Message.Contains("Cannot add or update a child row") == true)
                 {
-                    return StatusCode(404, "Not such work or user");
+                    return StatusCode(404, "Not such work or student");
                 }
                 return StatusCode(500, "DbUpdateException");
             }
@@ -264,16 +264,16 @@ namespace Web.Controllers
             }
         }
 
-        private async Task PutData(int userId, int workId, ulong value)
+        private async Task PutData(int studentId, int workId, ulong value)
         {
-            Result? result = await _dbContext.Result.FirstOrDefaultAsync(x => x.UserId == userId && x.WorkId == workId);
+            Result? result = await _dbContext.Result.FirstOrDefaultAsync(x => x.StudentId == studentId && x.WorkId == workId);
             Work work = await _dbContext.Work.FirstAsync(x => x.Id == workId);
 
             if (result is null)
             {
                 result = new Result()
                 {
-                    UserId = userId,
+                    StudentId = studentId,
                     WorkId = workId,
                 };
 
@@ -293,19 +293,19 @@ namespace Web.Controllers
         /// <response code="404">Couldn't create object before put (state unchanged)</response>
         /// <returns></returns>
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [HttpPatch("{userId}/{workId}/{taskNumber}/{value}")]
-        public async Task<IActionResult> Patch([Required] int userId, [Required] int workId, [Required] int taskNumber, [Required] int value)
+        [HttpPatch("{studentId}/{workId}/{taskNumber}/{value}")]
+        public async Task<IActionResult> Patch([Required] int studentId, [Required] int workId, [Required] int taskNumber, [Required] int value)
         {
             try
             {
-                await PatchData(userId, workId, taskNumber, value);
+                await PatchData(studentId, workId, taskNumber, value);
                 return StatusCode(204);
             }
             catch (DbUpdateException ex)
             {
                 if (ex.InnerException?.Message.Contains("Cannot add or update a child row") == true)
                 {
-                    return StatusCode(404, "Not such work or user");
+                    return StatusCode(404, "Not such work or student");
                 }
                 return StatusCode(500, "DbUpdateException");
             }
@@ -315,16 +315,16 @@ namespace Web.Controllers
             }
         }
 
-        private async Task PatchData(int userId, int workId, int bitN, int value)
+        private async Task PatchData(int studentId, int workId, int bitN, int value)
         {
-            Result? result = await _dbContext.Result.FirstOrDefaultAsync(x => x.UserId == userId && x.WorkId == workId);
+            Result? result = await _dbContext.Result.FirstOrDefaultAsync(x => x.StudentId == studentId && x.WorkId == workId);
             Work work = await _dbContext.Work.FirstAsync(x => x.Id == workId);
 
             if (result is null)
             {
                 result = new Result()
                 {
-                    UserId = userId,
+                    StudentId = studentId,
                     WorkId = workId,
                 };
 
@@ -347,19 +347,19 @@ namespace Web.Controllers
         /// <summary>
         /// Deleting object
         /// </summary>
-        /// <param name="userId">User's id</param>
+        /// <param name="studentId">Student's id</param>
         /// <param name="workId">Work's id</param>
         /// <returns>response</returns>
         /// <response code="200">Never return</response>
         /// <response code="204">Success delete</response>
         /// <response code="404">Couldn't find obj (state unchanched)</response>
         /// <response code="409">Couldn't delete relationship (state unchanched)</response>
-        [HttpDelete("{userId}/{workId}")]
-        public async Task<IActionResult> Delete(int userId, int workId)
+        [HttpDelete("{studentId}/{workId}")]
+        public async Task<IActionResult> Delete(int studentId, int workId)
         {
             try
             {
-                Result? obj = _dbContext.Result.FirstOrDefault(x => x.UserId == userId && x.WorkId == workId);
+                Result? obj = _dbContext.Result.FirstOrDefault(x => x.StudentId == studentId && x.WorkId == workId);
                 if (obj is null)
                 {
                     return NotFound();

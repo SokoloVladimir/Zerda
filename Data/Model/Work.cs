@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Data.Model;
 
 [Index("DisciplineId", "WorkTypeId", "Number", Name = "WorkMeta_UNIQUE", IsUnique = true)]
-[Index("WorkTypeId", Name = "WorkType_Work_FK_idx")]
+[Index("WorkTypeId", Name = "WorkType_INDEX")]
 public partial class Work
 {
     /// <summary>

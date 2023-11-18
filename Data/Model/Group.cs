@@ -24,5 +24,5 @@ public partial class Group
 
     [JsonIgnore]
     [InverseProperty("Group")]
-    public virtual ICollection<User> User { get; } = new List<User>();
+    public virtual ICollection<Student> Student { get; } = new List<Student>();
 }

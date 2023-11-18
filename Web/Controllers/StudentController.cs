@@ -8,13 +8,13 @@ namespace Web.Controllers
 {
     [ApiController]
     [Route("[controller]")]    
-    public class UserController : ControllerBase
+    public class StudentController : ControllerBase
     {
-        private readonly ILogger<UserController> _logger;
+        private readonly ILogger<StudentController> _logger;
 
         private readonly ZerdaContext _dbContext;
 
-        public UserController(ILogger<UserController> logger, ZerdaContext dbContext)
+        public StudentController(ILogger<StudentController> logger, ZerdaContext dbContext)
         {
             _logger = logger;
             _dbContext = dbContext;
@@ -28,14 +28,14 @@ namespace Web.Controllers
         /// <param name="offset">starting position relative to the beginning of the table</param>
         /// <returns>List of objects</returns>
         /// <response code="200">Success</response>
-        [ProducesResponseType(typeof(IEnumerable<User>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(IEnumerable<Student>), (int)HttpStatusCode.OK)]
         [HttpGet()]
         public async Task<IActionResult> Get(
             int? groupId = null,
             int limit = 50, 
             int offset = 0)
         {
-            return StatusCode(200, await _dbContext.User
+            return StatusCode(200, await _dbContext.Student
                 .Include(x => x.Account)
                 .Include(x => x.Group)
                 .Where(x => groupId == null || x.GroupId == groupId)
@@ -53,13 +53,13 @@ namespace Web.Controllers
         /// <response code="201">Success adding</response>
         /// <response code="204">Duplicate object (state unchanged)</response>
         /// <returns>Created object</returns>
-        [ProducesResponseType(typeof(User), (int)HttpStatusCode.Created)]
+        [ProducesResponseType(typeof(Student), (int)HttpStatusCode.Created)]
         [HttpPost()]
-        public async Task<IActionResult> Post([FromBody] User obj)
+        public async Task<IActionResult> Post([FromBody] Student obj)
         {
             try
             {
-                await _dbContext.User.AddAsync(obj);
+                await _dbContext.Student.AddAsync(obj);
                 await _dbContext.SaveChangesAsync();
                 return StatusCode(201, obj);
             }
@@ -92,7 +92,7 @@ namespace Web.Controllers
         {
             try
             {
-                User? obj = _dbContext.User.FirstOrDefault(x => x.Id == id);
+                Student? obj = _dbContext.Student.FirstOrDefault(x => x.Id == id);
                 if (obj is null)
                 {
                     return NotFound();

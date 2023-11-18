@@ -7,16 +7,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Data.Model;
 
-[PrimaryKey("UserId", "WorkId")]
-[Index("UserId", Name = "fk_Work_has_Student_Student1_idx")]
-[Index("WorkId", Name = "fk_Work_has_Student_Work1_idx")]
+[PrimaryKey("StudentId", "WorkId")]
+[Index("StudentId", Name = "StudentId_INDEX")]
+[Index("WorkId", Name = "WorkId_INDEX")]
 public partial class Result
 {
     /// <summary>
     /// Идентификатор пользователя
     /// </summary>
     [Key]
-    public int UserId { get; set; }
+    public int StudentId { get; set; }
 
     /// <summary>
     /// Идентификатор работы
@@ -30,10 +30,9 @@ public partial class Result
     [Column(TypeName = "bit(64)")]
     public ulong Tasks { get; set; }
 
-    [JsonIgnore]
-    [ForeignKey("UserId")]
+    [ForeignKey("StudentId")]
     [InverseProperty("Result")]
-    public virtual User User { get; set; } = null!;
+    public virtual Student Student { get; set; } = null!;
 
     [JsonIgnore]
     [ForeignKey("WorkId")]
