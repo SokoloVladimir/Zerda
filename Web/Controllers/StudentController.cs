@@ -1,23 +1,21 @@
 using Asp.Versioning;
 using Data.Context;
 using Data.Model;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
 
-namespace Web.Controllers.V1
+namespace Web.Controllers
 {
     [ApiController]
-    [ApiVersion("1.0")]
-    [Route("api/v1/[controller]")]
-    public class WorkTypeController : ControllerBase
+    [Route("[controller]")]
+    public class StudentController : ControllerBase
     {
-        private readonly ILogger<WorkTypeController> _logger;
+        private readonly ILogger<StudentController> _logger;
 
         private readonly ZerdaContext _dbContext;
 
-        public WorkTypeController(ILogger<WorkTypeController> logger, ZerdaContext dbContext)
+        public StudentController(ILogger<StudentController> logger, ZerdaContext dbContext)
         {
             _logger = logger;
             _dbContext = dbContext;
@@ -25,17 +23,24 @@ namespace Web.Controllers.V1
 
         #region GET
         /// <summary>
-        /// Метод на получение типов работ
+        /// Метод на получение студентов
         /// </summary>
+        /// <param name="groupId">фильтрация по группам</param>
         /// <param name="limit">количество записей (до 50)</param>
         /// <param name="offset">смещение относительно начала таблицы</param>
         /// <returns>список объектов</returns>
         /// <response code="200">Успех</response>
-        [ProducesResponseType(typeof(IEnumerable<WorkType>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(IEnumerable<Student>), (int)HttpStatusCode.OK)]
         [HttpGet()]
-        public async Task<IActionResult> Get(int limit = 50, int offset = 0)
+        public async Task<IActionResult> Get(
+            int? groupId = null,
+            int limit = 50,
+            int offset = 0)
         {
-            return StatusCode(200, await _dbContext.WorkType
+            return StatusCode(200, await _dbContext.Student
+                .Include(x => x.Account)
+                .Include(x => x.Group)
+                .Where(x => groupId == null || x.GroupId == groupId)
                 .AsNoTracking()
                 .OrderBy(x => x.Id)
                 .Skip(offset)
@@ -46,19 +51,19 @@ namespace Web.Controllers.V1
 
         #region POST
         /// <summary>
-        /// Добавление типа работы
+        /// Добавление студента
         /// </summary>
         /// <response code="200">Не возвращается для этого метода</response>
         /// <response code="201">Успешное добавление</response>
         /// <response code="204">Попытка добавления дубликата (status quo)</response>
         /// <returns>Созданный объект</returns>
-        [ProducesResponseType(typeof(WorkType), (int)HttpStatusCode.Created)]
+        [ProducesResponseType(typeof(Student), (int)HttpStatusCode.Created)]
         [HttpPost()]
-        public async Task<IActionResult> Post([FromBody] WorkType obj)
+        public async Task<IActionResult> Post([FromBody] Student obj)
         {
             try
             {
-                await _dbContext.WorkType.AddAsync(obj);
+                await _dbContext.Student.AddAsync(obj);
                 await _dbContext.SaveChangesAsync();
                 return StatusCode(201, obj);
             }
@@ -93,7 +98,7 @@ namespace Web.Controllers.V1
         {
             try
             {
-                WorkType? obj = _dbContext.WorkType.FirstOrDefault(x => x.Id == id);
+                Student? obj = _dbContext.Student.FirstOrDefault(x => x.Id == id);
                 if (obj is null)
                 {
                     return NotFound();

@@ -7,11 +7,10 @@ using System.Collections;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
 
-namespace Web.Controllers.V1
+namespace Web.Controllers
 {
     [ApiController]
-    [ApiVersion("1.0")]
-    [Route("api/v1/[controller]")]
+    [Route("[controller]")]
     public class ResultController : ControllerBase
     {
         private readonly ILogger<ResultController> _logger;

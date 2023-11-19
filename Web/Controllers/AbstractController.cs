@@ -8,7 +8,7 @@ using System.Linq.Expressions;
 using System.Net;
 using System.Reflection;
 
-namespace Web.Controllers.V1
+namespace Web.Controllers
 {
 
     public abstract class AbstractController<T> : ControllerBase where T : class
