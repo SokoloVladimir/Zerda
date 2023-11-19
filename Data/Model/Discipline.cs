@@ -7,6 +7,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Data.Model;
 
+/// <summary>
+/// Дисциплина
+/// </summary>
 [Index("Name", Name = "Name_UNIQUE", IsUnique = true)]
 public partial class Discipline
 {

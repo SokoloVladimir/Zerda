@@ -28,8 +28,8 @@ namespace Web.Controllers
         /// Метод на получение результатов
         /// </summary>
         /// <param name="studentId">фильтрация по студенту</param>
+        /// <param name="workVariantId">фильтрация по варианту работы</param>
         /// <param name="workId">фильтрация по работе</param>
-        /// <param name="disciplineId">фильтрация по дисциплине</param>
         /// <param name="groupId">фильтрация по группе</param>
         /// <param name="limit">количество записей (до 50)</param>
         /// <param name="offset">смещение относительно начала таблицы</param>
@@ -39,8 +39,8 @@ namespace Web.Controllers
         [HttpGet()]
         public async Task<IActionResult> GetByStudentId(
             int? studentId = null,
+            int? workVariantId = null,
             int? workId = null,
-            int? disciplineId = null,
             int? groupId = null,
             int limit = 50,
             int offset = 0
@@ -48,21 +48,21 @@ namespace Web.Controllers
         {
             return StatusCode(200, await _dbContext.Result
                 .AsNoTracking()
-                .Include(x => x.Work).ThenInclude(x => x.Discipline)
-                .Include(x => x.Student).ThenInclude(x => x.Group)
+                .Include(x => x.WorkVariant)
+                .Include(x => x.Student)
                 .Where(x => studentId == null || x.StudentId == studentId)
-                .Where(x => workId == null || x.WorkId == workId)
-                .Where(x => disciplineId == null || x.Work.DisciplineId == disciplineId)
+                .Where(x => workVariantId == null || x.WorkVariantId == workVariantId)
+                .Where(x => workId == null || x.WorkVariant.WorkId == workId)
                 .Where(x => groupId == null || x.Student.Group.Id == groupId)
-                .OrderBy(x => x.StudentId).ThenBy(x => x.WorkId)
+                .OrderBy(x => x.StudentId).ThenBy(x => x.WorkVariantId)
                 .Skip(offset)
                 .Take(Math.Min(limit, 50))
                 .Select(x => new
                 {
                     x.StudentId,
-                    x.WorkId,
-                    Tasks = UnsetBitsAfterN(x.Tasks, (uint)x.Work.TaskCount),
-                    WorkTaskCount = x.Work.TaskCount
+                    x.WorkVariantId,
+                    Tasks = UnsetBitsAfterN(x.Tasks, (uint)x.WorkVariant.TaskCount),
+                    TaskCount = x.WorkVariant.TaskCount
                 })
                 .ToListAsync()
             );
@@ -72,8 +72,8 @@ namespace Web.Controllers
         /// Метод на получение результатов как массив бит
         /// </summary>
         /// <param name="studentId">фильтрация по студенту</param>
+        /// <param name="workVariantId">фильтрация по варианту работы</param>
         /// <param name="workId">фильтрация по работе</param>
-        /// <param name="disciplineId">фильтрация по дисциплине</param>
         /// <param name="groupId">фильтрация по группе</param>
         /// <param name="limit">количество записей (до 50)</param>
         /// <param name="offset">смещение относительно начала таблицы</param>
@@ -83,8 +83,8 @@ namespace Web.Controllers
         [HttpGet("withBitArray")]
         public async Task<IActionResult> GetByStudentIdBitArray(
             int? studentId = null,
+            int? workVariantId = null,
             int? workId = null,
-            int? disciplineId = null,
             int? groupId = null,
             int limit = 50,
             int offset = 0
@@ -92,21 +92,21 @@ namespace Web.Controllers
         {
             return StatusCode(200, await _dbContext.Result
                 .AsNoTracking()
-                .Include(x => x.Work).ThenInclude(x => x.Discipline)
-                .Include(x => x.Student).ThenInclude(x => x.Group)
+                .Include(x => x.WorkVariant)
+                .Include(x => x.Student)
                 .Where(x => studentId == null || x.StudentId == studentId)
-                .Where(x => workId == null || x.WorkId == workId)
-                .Where(x => disciplineId == null || x.Work.DisciplineId == disciplineId)
+                .Where(x => workVariantId == null || x.WorkVariantId == workVariantId)
+                .Where(x => workId == null || x.WorkVariant.WorkId == workId)
                 .Where(x => groupId == null || x.Student.Group.Id == groupId)
-                .OrderBy(x => x.StudentId).ThenBy(x => x.WorkId)
+                .OrderBy(x => x.StudentId).ThenBy(x => x.WorkVariantId)
                 .Skip(offset)
                 .Take(Math.Min(limit, 50))
                 .Select(x => new
                 {
                     x.StudentId,
-                    x.WorkId,
-                    Tasks = BitArrayToIntArray(new BitArray(BitConverter.GetBytes(x.Tasks)), (uint)x.Work.TaskCount),
-                    WorkTaskCount = x.Work.TaskCount
+                    x.WorkVariantId,
+                    Tasks = BitArrayToIntArray(new BitArray(BitConverter.GetBytes(x.Tasks)), (uint)x.WorkVariant.TaskCount),
+                    TaskCount = x.WorkVariant.TaskCount
                 })
                 .ToListAsync()
             );
@@ -121,26 +121,26 @@ namespace Web.Controllers
         /// Точно устанавливает значения бит заданий. Биты отсчитываются от младшего (1 задание) к старшему. Активный бит означает выполненное задание.
         /// </remarks>
         /// <param name="studentId">студент</param>
-        /// <param name="workId">работа</param>
+        /// <param name="workVariantId">вариант работы</param>
         /// <param name="value">значения бит заданий упакованные в ULong число</param>
         /// <returns>ответ</returns>
         /// <response code="200">Не возвращается для этого метода</response>
         /// <response code="204">Успешное создание</response>
         /// <response code="404">Не найден родительский объект (status quo)</response>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
-        [HttpPost("{studentId}/{workId}/{value}")]
-        public async Task<IActionResult> Post([Required] int studentId, [Required] int workId, [Required] uint value)
+        [HttpPost("{studentId}/{workVariantId}/{value}")]
+        public async Task<IActionResult> Post([Required] int studentId, [Required] int workVariantId, [Required] uint value)
         {
             try
             {
-                await PostData(studentId, workId, value);
+                await PostData(studentId, workVariantId, value);
                 return StatusCode(204);
             }
             catch (DbUpdateException ex)
             {
                 if (ex.InnerException?.Message.Contains("Cannot add or update a child row") == true)
                 {
-                    return StatusCode(404, "Not such work or student");
+                    return StatusCode(404, "Not such work variant or student");
                 }
                 return StatusCode(500, "DbUpdateException");
             }
@@ -158,18 +158,18 @@ namespace Web.Controllers
         /// Биты отсчитываются от младшего (1 задание) к старшему. Активный бит означает выполненное задание.         
         /// </remarks>
         /// <param name="studentId">студент</param>
-        /// <param name="workId">работа</param>
+        /// <param name="workVariantId">вариант работы</param>
         /// <returns>ответ</returns>
         /// <response code="200">Не возвращается для этого метода</response>
         /// <response code="204">Успешное создание</response>
         /// <response code="404">Не найден родительский объект (status quo)</response>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
-        [HttpPost("{studentId}/{workId}")]
-        public async Task<IActionResult> PostByJson([Required] int studentId, [Required] int workId, [FromBody] int[] values)
+        [HttpPost("{studentId}/{workVariantId}")]
+        public async Task<IActionResult> PostByJson([Required] int studentId, [Required] int workVariantId, [FromBody] int[] values)
         {
             try
             {
-                await PostData(studentId, workId, BitArrayToInt(
+                await PostData(studentId, workVariantId, BitArrayToInt(
                     new BitArray(
                         values.Select(Convert.ToBoolean).ToArray())
                     )
@@ -180,7 +180,7 @@ namespace Web.Controllers
             {
                 if (ex.InnerException?.Message.Contains("Cannot add or update a child row") == true)
                 {
-                    return StatusCode(404, "Not such work or student");
+                    return StatusCode(404, "Not such work variant or student");
                 }
                 return StatusCode(500, "DbUpdateException");
             }
@@ -190,17 +190,17 @@ namespace Web.Controllers
             }
         }
 
-        private async Task PostData(int studentId, int workId, uint value)
+        private async Task PostData(int studentId, int workVariantId, uint value)
         {
-            Result? result = await _dbContext.Result.FirstOrDefaultAsync(x => x.StudentId == studentId && x.WorkId == workId);
-            Work work = await _dbContext.Work.FirstAsync(x => x.Id == workId);
+            Result? result = await _dbContext.Result.FirstOrDefaultAsync(x => x.StudentId == studentId && x.WorkVariantId == workVariantId);
+            Work work = await _dbContext.Work.FirstAsync(x => x.Id == workVariantId);
 
             if (result is null)
             {
                 result = new Result()
                 {
                     StudentId = studentId,
-                    WorkId = workId,
+                    WorkVariantId = workVariantId,
                 };
 
                 _dbContext.Result.Add(result);
@@ -218,26 +218,26 @@ namespace Web.Controllers
         /// Применяет к результату заданий дизъюнкцию (логическое сложение) отправленного значения. Безопасный метод. 
         /// </remarks>       
         /// <param name="studentId">студент</param>
-        /// <param name="workId">работа</param>
+        /// <param name="workVariantId">вариант работы</param>
         /// <param name="value">значения бит заданий упакованные в ULong число</param>
         /// <returns>ответ</returns>
         /// <response code="200">Не возвращается для этого метода</response>
         /// <response code="204">Успешное обновление</response>
         /// <response code="404">Не найден родительский объект (status quo)</response>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
-        [HttpPut("{studentId}/{workId}/{value}")]
-        public async Task<IActionResult> Put([Required] int studentId, [Required] int workId, [Required] ulong value)
+        [HttpPut("{studentId}/{workVariantId}/{value}")]
+        public async Task<IActionResult> Put([Required] int studentId, [Required] int workVariantId, [Required] ulong value)
         {
             try
             {
-                await PutData(studentId, workId, value);
+                await PutData(studentId, workVariantId, value);
                 return StatusCode(204);
             }
             catch (DbUpdateException ex)
             {
                 if (ex.InnerException?.Message.Contains("Cannot add or update a child row") == true)
                 {
-                    return StatusCode(404, "Not such work or student");
+                    return StatusCode(404, "Not such work variant or student");
                 }
                 return StatusCode(500, "DbUpdateException");
             }
@@ -254,18 +254,19 @@ namespace Web.Controllers
         /// Применяет к результату заданий дизъюнкцию (логическое сложение) отправленного значения. Безопасный метод.
         /// </remarks>       
         /// <param name="studentId">студент</param>
-        /// <param name="workId">работа</param>
+        /// <param name="workVariantId">вариант работы</param>
+        /// <param name="values">массив значений</param>
         /// <returns>ответ</returns>
         /// <response code="200">Не возвращается для этого метода</response>
         /// <response code="204">Успешное обновление</response>
         /// <response code="404">Не найден родительский объект (status quo)</response>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
-        [HttpPut("{studentId}/{workId}")]
-        public async Task<IActionResult> PutByJson([Required] int studentId, [Required] int workId, [FromBody] int[] values)
+        [HttpPut("{studentId}/{workVariantId}")]
+        public async Task<IActionResult> PutByJson([Required] int studentId, [Required] int workVariantId, [FromBody] int[] values)
         {
             try
             {
-                await PutData(studentId, workId, BitArrayToInt(
+                await PutData(studentId, workVariantId, BitArrayToInt(
                     new BitArray(
                         values.Select(Convert.ToBoolean).ToArray())
                     )
@@ -276,7 +277,7 @@ namespace Web.Controllers
             {
                 if (ex.InnerException?.Message.Contains("Cannot add or update a child row") == true)
                 {
-                    return StatusCode(404, "Not such work or student");
+                    return StatusCode(404, "Not such work variant or student");
                 }
                 return StatusCode(500, "DbUpdateException");
             }
@@ -286,17 +287,17 @@ namespace Web.Controllers
             }
         }
 
-        private async Task PutData(int studentId, int workId, ulong value)
+        private async Task PutData(int studentId, int workVariantId, ulong value)
         {
-            Result? result = await _dbContext.Result.FirstOrDefaultAsync(x => x.StudentId == studentId && x.WorkId == workId);
-            Work work = await _dbContext.Work.FirstAsync(x => x.Id == workId);
+            Result? result = await _dbContext.Result.FirstOrDefaultAsync(x => x.StudentId == studentId && x.WorkVariantId == workVariantId);
+            Work work = await _dbContext.Work.FirstAsync(x => x.Id == workVariantId);
 
             if (result is null)
             {
                 result = new Result()
                 {
                     StudentId = studentId,
-                    WorkId = workId,
+                    WorkVariantId = workVariantId,
                 };
 
                 _dbContext.Result.Add(result);
@@ -314,7 +315,7 @@ namespace Web.Controllers
         /// Выбивает или активирует соответсвующий бит. Безопасный метод. 
         /// </remarks>       
         /// <param name="studentId">студент</param>
-        /// <param name="workId">работа</param>
+        /// <param name="workVariantId">вариант работы</param>
         /// <param name="taskNumber">номер задания (от 1)</param>
         /// <param name="value">значение 0/1</param>
         /// <returns>ответ</returns>
@@ -322,19 +323,19 @@ namespace Web.Controllers
         /// <response code="204">Успешное обновление</response>
         /// <response code="404">Не найден родительский объект (status quo)</response>
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [HttpPatch("{studentId}/{workId}/{taskNumber}/{value}")]
-        public async Task<IActionResult> Patch([Required] int studentId, [Required] int workId, [Required] int taskNumber, [Required] int value)
+        [HttpPatch("{studentId}/{workVariantId}/{taskNumber}/{value}")]
+        public async Task<IActionResult> Patch([Required] int studentId, [Required] int workVariantId, [Required] int taskNumber, [Required] int value)
         {
             try
             {
-                await PatchData(studentId, workId, taskNumber, value);
+                await PatchData(studentId, workVariantId, taskNumber, value);
                 return StatusCode(204);
             }
             catch (DbUpdateException ex)
             {
                 if (ex.InnerException?.Message.Contains("Cannot add or update a child row") == true)
                 {
-                    return StatusCode(404, "Not such work or student");
+                    return StatusCode(404, "Not such work variant or student");
                 }
                 return StatusCode(500, "DbUpdateException");
             }
@@ -344,17 +345,17 @@ namespace Web.Controllers
             }
         }
 
-        private async Task PatchData(int studentId, int workId, int bitN, int value)
+        private async Task PatchData(int studentId, int workVariantId, int bitN, int value)
         {
-            Result? result = await _dbContext.Result.FirstOrDefaultAsync(x => x.StudentId == studentId && x.WorkId == workId);
-            Work work = await _dbContext.Work.FirstAsync(x => x.Id == workId);
+            Result? result = await _dbContext.Result.FirstOrDefaultAsync(x => x.StudentId == studentId && x.WorkVariantId == workVariantId);
+            Work work = await _dbContext.Work.FirstAsync(x => x.Id == workVariantId);
 
             if (result is null)
             {
                 result = new Result()
                 {
                     StudentId = studentId,
-                    WorkId = workId,
+                    WorkVariantId = workVariantId,
                 };
 
                 _dbContext.Result.Add(result);
@@ -377,18 +378,18 @@ namespace Web.Controllers
         /// Удаление результата
         /// </summary>          
         /// <param name="studentId">студент</param>
-        /// <param name="workId">работа</param>
+        /// <param name="workVariantId">вариант работы</param>
         /// <returns>ответ</returns>
         /// <response code="200">Не возвращается для этого метода</response>
         /// <response code="204">Успешное удаление</response>
         /// <response code="404">Объект для удаления не найден (status quo)</response>
         /// <response code="409">Существует некаскадная связь (status quo)</response>
-        [HttpDelete("{studentId}/{workId}")]
-        public async Task<IActionResult> Delete(int studentId, int workId)
+        [HttpDelete("{studentId}/{workVariantId}")]
+        public async Task<IActionResult> Delete(int studentId, int workVariantId)
         {
             try
             {
-                Result? obj = _dbContext.Result.FirstOrDefault(x => x.StudentId == studentId && x.WorkId == workId);
+                Result? obj = _dbContext.Result.FirstOrDefault(x => x.StudentId == studentId && x.WorkVariantId == workVariantId);
                 if (obj is null)
                 {
                     return NotFound();

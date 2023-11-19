@@ -2,14 +2,16 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 
 namespace Data.Model;
 
-[PrimaryKey("StudentId", "WorkId")]
+/// <summary>
+/// Результат выполнения варианта работы
+/// </summary>
+[PrimaryKey("StudentId", "WorkVariantId")]
 [Index("StudentId", Name = "StudentId_INDEX")]
-[Index("WorkId", Name = "WorkId_INDEX")]
+[Index("WorkVariantId", Name = "WorkVariant_Result_FK_idx")]
 public partial class Result
 {
     /// <summary>
@@ -22,7 +24,7 @@ public partial class Result
     /// Идентификатор работы
     /// </summary>
     [Key]
-    public int WorkId { get; set; }
+    public int WorkVariantId { get; set; }
 
     /// <summary>
     /// Массив бит для обозначения выполненных работ
@@ -30,12 +32,14 @@ public partial class Result
     [Column(TypeName = "bit(64)")]
     public ulong Tasks { get; set; }
 
+    [Column(TypeName = "datetime")]
+    public DateTime LastEdit { get; set; }
+
     [ForeignKey("StudentId")]
     [InverseProperty("Result")]
     public virtual Student Student { get; set; } = null!;
 
-    [JsonIgnore]
-    [ForeignKey("WorkId")]
+    [ForeignKey("WorkVariantId")]
     [InverseProperty("Result")]
-    public virtual Work Work { get; set; } = null!;
+    public virtual WorkVariant WorkVariant { get; set; } = null!;
 }

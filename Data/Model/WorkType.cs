@@ -7,14 +7,20 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Data.Model;
 
+/// <summary>
+/// Тип работы
+/// </summary>
 [Index("Name", Name = "Name_UNIQUE", IsUnique = true)]
 public partial class WorkType
 {
+    /// <summary>
+    /// Идентификатор типа работы
+    /// </summary>
     [Key]
     public int Id { get; set; }
 
     /// <summary>
-    /// Идентифицирующее наименование типа работы
+    /// Наименование типа работы
     /// </summary>
     [StringLength(50)]
     public string Name { get; set; } = null!;

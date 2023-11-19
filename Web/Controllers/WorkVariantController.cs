@@ -1,5 +1,4 @@
-﻿using Asp.Versioning;
-using Data.Context;
+﻿using Data.Context;
 using Data.Model;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,13 +8,13 @@ namespace Web.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class WorkController : ControllerBase
+    public class WorkVariantController : ControllerBase
     {
-        private readonly ILogger<WorkController> _logger;
+        private readonly ILogger<WorkVariantController> _logger;
 
         private readonly ZerdaContext _dbContext;
 
-        public WorkController(ILogger<WorkController> logger, ZerdaContext dbContext)
+        public WorkVariantController(ILogger<WorkVariantController> logger, ZerdaContext dbContext)
         {
             _logger = logger;
             _dbContext = dbContext;
@@ -23,29 +22,32 @@ namespace Web.Controllers
 
         #region GET
         /// <summary>
-        /// Метод на получение работ
+        /// Метод на получение вариантов работы
         /// </summary>
+        /// <param name="workId">фильтрация по работе</param>        
         /// <param name="disciplineId">фильтрация по дисциплине</param>
         /// <param name="workTypeId">фильтрация по типу работы</param>
         /// <param name="limit">количество записей (до 50)</param>
         /// <param name="offset">смещение относительно начала таблицы</param>
         /// <returns>список объектов</returns>
         /// <response code="200">Успех</response>
-        [ProducesResponseType(typeof(IEnumerable<Work>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(IEnumerable<WorkVariant>), (int)HttpStatusCode.OK)]
         [HttpGet()]
         public async Task<IActionResult> Get(
+            int? workId = null,
             int? disciplineId = null,
             int? workTypeId = null,
             int limit = 50,
             int offset = 0
             )
         {
-            return StatusCode(200, await _dbContext.Work
+            return StatusCode(200, await _dbContext.WorkVariant
                 .AsNoTracking()
-                .Include(x => x.Discipline)
-                .Include(x => x.WorkType)
-                .Where(x => disciplineId == null || x.DisciplineId == disciplineId)
-                .Where(x => workTypeId == null || x.WorkTypeId == workTypeId)
+                .Include(x => x.Work).ThenInclude(x => x.Discipline)
+                .Include(x => x.Work).ThenInclude(x => x.WorkType)
+                .Where(x => workId == null || x.WorkId == workId)
+                .Where(x => disciplineId == null || x.Work.DisciplineId == disciplineId)
+                .Where(x => workTypeId == null || x.Work.WorkTypeId == workTypeId)
                 .OrderBy(x => x.Id)
                 .Skip(offset)
                 .Take(Math.Min(limit, 50))
@@ -55,19 +57,19 @@ namespace Web.Controllers
 
         #region POST
         /// <summary>
-        /// Добавление работы
+        /// Добавление варианта работы
         /// </summary>
         /// <response code="200">Не возвращается для этого метода</response>
         /// <response code="201">Успешное добавление</response>
         /// <response code="204">Попытка добавления дубликата (status quo)</response>
         /// <returns>Созданный объект</returns>
-        [ProducesResponseType(typeof(Work), (int)HttpStatusCode.Created)]
+        [ProducesResponseType(typeof(WorkVariant), (int)HttpStatusCode.Created)]
         [HttpPost()]
-        public async Task<IActionResult> Post([FromBody] Work obj)
+        public async Task<IActionResult> Post([FromBody] WorkVariant obj)
         {
             try
             {
-                await _dbContext.Work.AddAsync(obj);
+                await _dbContext.WorkVariant.AddAsync(obj);
                 await _dbContext.SaveChangesAsync();
                 return StatusCode(201, obj);
             }
@@ -89,7 +91,7 @@ namespace Web.Controllers
 
         #region DELETE
         /// <summary>
-        /// Удаление работы
+        /// Удаление варианта работы
         /// </summary>
         /// <param name="id">идентификатор объекта</param>
         /// <returns>HTTP ответ</returns>
@@ -102,7 +104,7 @@ namespace Web.Controllers
         {
             try
             {
-                Work? obj = _dbContext.Work.FirstOrDefault(x => x.Id == id);
+                WorkVariant? obj = _dbContext.WorkVariant.FirstOrDefault(x => x.Id == id);
                 if (obj is null)
                 {
                     return NotFound();

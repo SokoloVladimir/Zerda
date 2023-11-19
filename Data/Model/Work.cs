@@ -7,6 +7,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Data.Model;
 
+/// <summary>
+/// Базовая работа
+/// </summary>
 [Index("DisciplineId", "WorkTypeId", "Number", Name = "WorkMeta_UNIQUE", IsUnique = true)]
 [Index("WorkTypeId", Name = "WorkType_INDEX")]
 public partial class Work
@@ -30,7 +33,7 @@ public partial class Work
     /// <summary>
     /// Номер работы
     /// </summary>
-    public int Number { get; set; }
+    public sbyte Number { get; set; }
 
     /// <summary>
     /// Тема работы. Может быть достаточно длинным.
@@ -38,26 +41,15 @@ public partial class Work
     [StringLength(150)]
     public string? Theme { get; set; }
 
-    /// <summary>
-    /// Время до которого нужно сдать работу, если NULL - бессрочно
-    /// </summary>
-    [Column(TypeName = "datetime")]
-    public DateTime? DateEst { get; set; }
-
-    /// <summary>
-    /// Количество заданий в работе, по умолчанию - 1
-    /// </summary>
-    public int TaskCount { get; set; }
-
     [ForeignKey("DisciplineId")]
     [InverseProperty("Work")]
     public virtual Discipline Discipline { get; set; } = null!;
 
-    [JsonIgnore]
-    [InverseProperty("Work")]
-    public virtual ICollection<Result> Result { get; } = new List<Result>();
-
     [ForeignKey("WorkTypeId")]
     [InverseProperty("Work")]
     public virtual WorkType WorkType { get; set; } = null!;
+
+    [JsonIgnore]
+    [InverseProperty("Work")]
+    public virtual ICollection<WorkVariant> WorkVariant { get; } = new List<WorkVariant>();
 }
