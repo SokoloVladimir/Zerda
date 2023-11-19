@@ -89,15 +89,16 @@ namespace Web.Controllers
         {
             try
             {
-                Discipline? discipline = await _dbContext.Discipline.FirstOrDefaultAsync(d => d.Id == obj.Id);
+                Discipline? discipline = await _dbContext.Discipline
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(d => d.Id == obj.Id);
                 if (discipline is not null)
                 {
-                    discipline = obj;
+                    _dbContext.Entry(obj).State = EntityState.Modified;
                 }
                 else
                 {
-                    discipline = obj;
-                    _dbContext.Discipline.Add(discipline);
+                    _dbContext.Entry(obj).State = EntityState.Added;
                 }
 
                 await _dbContext.SaveChangesAsync();
