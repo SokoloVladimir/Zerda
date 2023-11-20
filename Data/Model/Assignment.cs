@@ -9,25 +9,25 @@ namespace Data.Model;
 /// <summary>
 /// Назначение варианта работы конкретной группе
 /// </summary>
-[PrimaryKey("WorkVariantId", "GroupId")]
+[PrimaryKey("GroupId", "WorkId")]
 [Index("GroupId", Name = "GroupId_INDEX")]
-[Index("WorkVariantId", Name = "WorkVariantId_INDEX")]
+[Index("WorkId", Name = "WorkVariantId_INDEX")]
 public partial class Assignment
 {
     /// <summary>
-    /// Внешний ключ варианта работы
+    /// Идентификатор работы
     /// </summary>
     [Key]
-    public int WorkVariantId { get; set; }
+    public int WorkId { get; set; }
 
     /// <summary>
-    /// Внешний ключ группы
+    /// Идентификатор группы
     /// </summary>
     [Key]
     public int GroupId { get; set; }
 
     /// <summary>
-    /// Дата назначения варианта работы
+    /// Дата назначения работы
     /// </summary>
     [Column(TypeName = "datetime")]
     public DateTime AssignedDate { get; set; }
@@ -36,7 +36,7 @@ public partial class Assignment
     [InverseProperty("Assignment")]
     public virtual Group Group { get; set; } = null!;
 
-    [ForeignKey("WorkVariantId")]
+    [ForeignKey("WorkId")]
     [InverseProperty("Assignment")]
-    public virtual WorkVariant WorkVariant { get; set; } = null!;
+    public virtual Work Work { get; set; } = null!;
 }

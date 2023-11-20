@@ -44,12 +44,14 @@ public partial class Student
     public int? AccountId { get; set; }
 
     /// <summary>
-    /// Внешний идентификатор группы
+    /// Группа студента
     /// </summary>
     public int GroupId { get; set; }
 
-    [Column(TypeName = "bit(1)")]
-    public ulong IsDeleted { get; set; }
+    /// <summary>
+    /// Если уволен
+    /// </summary>
+    public bool IsDeleted { get; set; }
 
     [ForeignKey("AccountId")]
     [InverseProperty("Student")]

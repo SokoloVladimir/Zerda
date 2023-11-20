@@ -7,11 +7,11 @@ using Microsoft.EntityFrameworkCore;
 namespace Data.Model;
 
 /// <summary>
-/// Результат выполнения варианта работы
+/// Результат выполнения работы
 /// </summary>
-[PrimaryKey("StudentId", "WorkVariantId")]
+[PrimaryKey("StudentId", "WorkId")]
 [Index("StudentId", Name = "StudentId_INDEX")]
-[Index("WorkVariantId", Name = "WorkVariant_Result_FK_idx")]
+[Index("WorkId", Name = "WorkId_INDEX")]
 public partial class Result
 {
     /// <summary>
@@ -24,7 +24,7 @@ public partial class Result
     /// Идентификатор работы
     /// </summary>
     [Key]
-    public int WorkVariantId { get; set; }
+    public int WorkId { get; set; }
 
     /// <summary>
     /// Массив бит для обозначения выполненных работ
@@ -32,14 +32,17 @@ public partial class Result
     [Column(TypeName = "bit(64)")]
     public ulong Tasks { get; set; }
 
-    [Column(TypeName = "datetime")]
+    /// <summary>
+    /// Дата последнего обновления записи
+    /// </summary>
+    [Column(TypeName = "timestamp")]
     public DateTime LastEdit { get; set; }
 
     [ForeignKey("StudentId")]
     [InverseProperty("Result")]
     public virtual Student Student { get; set; } = null!;
 
-    [ForeignKey("WorkVariantId")]
+    [ForeignKey("WorkId")]
     [InverseProperty("Result")]
-    public virtual WorkVariant WorkVariant { get; set; } = null!;
+    public virtual Work Work { get; set; } = null!;
 }

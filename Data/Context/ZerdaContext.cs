@@ -26,13 +26,13 @@ public partial class ZerdaContext : DbContext
 
     public virtual DbSet<Result> Result { get; set; }
 
+    public virtual DbSet<Semester> Semester { get; set; }
+
     public virtual DbSet<Student> Student { get; set; }
 
     public virtual DbSet<Work> Work { get; set; }
 
     public virtual DbSet<WorkType> WorkType { get; set; }
-
-    public virtual DbSet<WorkVariant> WorkVariant { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -55,25 +55,21 @@ public partial class ZerdaContext : DbContext
 
         modelBuilder.Entity<Assignment>(entity =>
         {
-            entity.HasKey(e => new { e.WorkVariantId, e.GroupId })
+            entity.HasKey(e => new { e.GroupId, e.WorkId })
                 .HasName("PRIMARY")
                 .HasAnnotation("MySql:IndexPrefixLength", new[] { 0, 0 });
 
             entity.ToTable(tb => tb.HasComment("Назначение варианта работы конкретной группе"));
 
-            entity.Property(e => e.WorkVariantId).HasComment("Внешний ключ варианта работы");
-            entity.Property(e => e.GroupId).HasComment("Внешний ключ группы");
+            entity.Property(e => e.GroupId).HasComment("Идентификатор группы");
+            entity.Property(e => e.WorkId).HasComment("Идентификатор работы");
             entity.Property(e => e.AssignedDate)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasComment("Дата назначения варианта работы");
+                .HasComment("Дата назначения работы");
 
-            entity.HasOne(d => d.Group).WithMany(p => p.Assignment)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("Group_Assignment_FK");
+            entity.HasOne(d => d.Group).WithMany(p => p.Assignment).HasConstraintName("Group_Assignment_FK");
 
-            entity.HasOne(d => d.WorkVariant).WithMany(p => p.Assignment)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("WorkVariant_Assignment_FK");
+            entity.HasOne(d => d.Work).WithMany(p => p.Assignment).HasConstraintName("Work_Assignment_FK");
         });
 
         modelBuilder.Entity<Discipline>(entity =>
@@ -98,22 +94,33 @@ public partial class ZerdaContext : DbContext
 
         modelBuilder.Entity<Result>(entity =>
         {
-            entity.HasKey(e => new { e.StudentId, e.WorkVariantId })
+            entity.HasKey(e => new { e.StudentId, e.WorkId })
                 .HasName("PRIMARY")
                 .HasAnnotation("MySql:IndexPrefixLength", new[] { 0, 0 });
 
-            entity.ToTable(tb => tb.HasComment("Результат выполнения варианта работы"));
+            entity.ToTable(tb => tb.HasComment("Результат выполнения работы"));
 
             entity.Property(e => e.StudentId).HasComment("Идентификатор пользователя");
-            entity.Property(e => e.WorkVariantId).HasComment("Идентификатор работы");
-            entity.Property(e => e.LastEdit).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.Property(e => e.Tasks)
-                .HasDefaultValueSql("b'0'")
-                .HasComment("Массив бит для обозначения выполненных работ");
+            entity.Property(e => e.WorkId).HasComment("Идентификатор работы");
+            entity.Property(e => e.LastEdit)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasComment("Дата последнего обновления записи");
+            entity.Property(e => e.Tasks).HasComment("Массив бит для обозначения выполненных работ");
 
             entity.HasOne(d => d.Student).WithMany(p => p.Result).HasConstraintName("Student_Result_FK");
 
-            entity.HasOne(d => d.WorkVariant).WithMany(p => p.Result).HasConstraintName("WorkVariant_Result_FK");
+            entity.HasOne(d => d.Work).WithMany(p => p.Result).HasConstraintName("Work_Result_FK");
+        });
+
+        modelBuilder.Entity<Semester>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PRIMARY");
+
+            entity.ToTable(tb => tb.HasComment("Семестр академического года"));
+
+            entity.Property(e => e.Id).HasComment("Идентификатор семестра");
+            entity.Property(e => e.IsSecond).HasComment("Если второй семестр");
+            entity.Property(e => e.StartYear).HasComment("Первый календарный год");
         });
 
         modelBuilder.Entity<Student>(entity =>
@@ -124,8 +131,8 @@ public partial class ZerdaContext : DbContext
 
             entity.Property(e => e.Id).HasComment("Идентификатор пользователя");
             entity.Property(e => e.AccountId).HasComment("Логин аккаунта для входа");
-            entity.Property(e => e.GroupId).HasComment("Внешний идентификатор группы");
-            entity.Property(e => e.IsDeleted).HasDefaultValueSql("b'0'");
+            entity.Property(e => e.GroupId).HasComment("Группа студента");
+            entity.Property(e => e.IsDeleted).HasComment("Если уволен");
             entity.Property(e => e.Name).HasComment("Имя");
             entity.Property(e => e.Patronym).HasComment("Отчество");
             entity.Property(e => e.Surname).HasComment("Фамилия");
@@ -144,16 +151,32 @@ public partial class ZerdaContext : DbContext
             entity.ToTable(tb => tb.HasComment("Базовая работа"));
 
             entity.Property(e => e.Id).HasComment("Идентификатор работы");
-            entity.Property(e => e.DisciplineId).HasComment("Внешний идентификатор дисциплины");
+            entity.Property(e => e.DisciplineId).HasComment("Дисциплина");
+            entity.Property(e => e.Document).HasComment("Документ содержащий файл работы");
             entity.Property(e => e.Number).HasComment("Номер работы");
-            entity.Property(e => e.Theme)
-                .HasDefaultValueSql("'Без темы'")
-                .HasComment("Тема работы. Может быть достаточно длинным.");
-            entity.Property(e => e.WorkTypeId).HasComment("Тип работы (внешний ключ)");
+            entity.Property(e => e.SemesterId).HasComment("Семестр");
+            entity.Property(e => e.TaskCount)
+                .HasDefaultValueSql("'5'")
+                .HasComment("Количество заданий в работе");
+            entity.Property(e => e.TaskFor3)
+                .HasDefaultValueSql("'3'")
+                .HasComment("Количество выполенных заданий на оценку 3");
+            entity.Property(e => e.TaskFor4)
+                .HasDefaultValueSql("'4'")
+                .HasComment("Количество выполенных заданий на оценку 4");
+            entity.Property(e => e.TaskFor5)
+                .HasDefaultValueSql("'5'")
+                .HasComment("Количество выполенных заданий на оценку 5");
+            entity.Property(e => e.Theme).HasComment("Тема работы. Может быть достаточно длинным.");
+            entity.Property(e => e.WorkTypeId).HasComment("Тип работы ");
 
             entity.HasOne(d => d.Discipline).WithMany(p => p.Work)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("Discipline_Work_FK");
+
+            entity.HasOne(d => d.Semester).WithMany(p => p.Work)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("Semester_Work_FK");
 
             entity.HasOne(d => d.WorkType).WithMany(p => p.Work)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -167,29 +190,7 @@ public partial class ZerdaContext : DbContext
             entity.ToTable(tb => tb.HasComment("Тип работы"));
 
             entity.Property(e => e.Id).HasComment("Идентификатор типа работы");
-            entity.Property(e => e.Name).HasComment("Иаименование типа работы");
-        });
-
-        modelBuilder.Entity<WorkVariant>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PRIMARY");
-
-            entity.ToTable(tb => tb.HasComment("Вариант работы"));
-
-            entity.Property(e => e.Id)
-                .ValueGeneratedNever()
-                .HasComment("Идентификатор варианта");
-            entity.Property(e => e.TaskCount)
-                .HasDefaultValueSql("'5'")
-                .HasComment("Количество заданий в варианте");
-            entity.Property(e => e.TasksFor3).HasComment("Количество выполненных заданий необходимых для оценки 3");
-            entity.Property(e => e.TasksFor4).HasComment("Количество выполненных заданий необходимых для оценки 4");
-            entity.Property(e => e.TasksFor5).HasComment("Количество выполненных заданий необходимых для оценки 5");
-            entity.Property(e => e.WorkId).HasComment("Внешний ключ родительской работы");
-
-            entity.HasOne(d => d.Work).WithMany(p => p.WorkVariant)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("Work_WorkVariant_FK");
+            entity.Property(e => e.Name).HasComment("Наименование типа работы");
         });
 
         OnModelCreatingPartial(modelBuilder);
