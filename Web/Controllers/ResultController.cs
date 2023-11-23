@@ -117,8 +117,7 @@ namespace Web.Controllers
         /// <param name="workId">работа</param>
         /// <param name="value">значения бит заданий упакованные в ULong число</param>
         /// <returns>ответ</returns>
-        /// <response code="200">Не возвращается для этого метода</response>
-        /// <response code="204">Успешное создание</response>
+        /// <response code="200">Успешное обновление</response>
         /// <response code="404">Не найден родительский объект (status quo)</response>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [HttpPost("{studentId}/{workId}/{value}")]
@@ -127,7 +126,7 @@ namespace Web.Controllers
             try
             {
                 await PostData(studentId, workId, value);
-                return StatusCode(204);
+                return StatusCode(200);
             }
             catch (DbUpdateException ex)
             {
@@ -153,8 +152,7 @@ namespace Web.Controllers
         /// <param name="studentId">студент</param>
         /// <param name="workId">работа</param>
         /// <returns>ответ</returns>
-        /// <response code="200">Не возвращается для этого метода</response>
-        /// <response code="204">Успешное создание</response>
+        /// <response code="200">Успешное обновление</response>
         /// <response code="404">Не найден родительский объект (status quo)</response>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [HttpPost("{studentId}/{workId}")]
@@ -167,7 +165,7 @@ namespace Web.Controllers
                         values.Select(Convert.ToBoolean).ToArray())
                     )
                 );
-                return StatusCode(204);
+                return StatusCode(200);
             }
             catch (DbUpdateException ex)
             {
@@ -214,8 +212,7 @@ namespace Web.Controllers
         /// <param name="workId">работа</param>
         /// <param name="value">значения бит заданий упакованные в ULong число</param>
         /// <returns>ответ</returns>
-        /// <response code="200">Не возвращается для этого метода</response>
-        /// <response code="204">Успешное обновление</response>
+        /// <response code="200">Успешное обновление</response>
         /// <response code="404">Не найден родительский объект (status quo)</response>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [HttpPut("{studentId}/{workId}/{value}")]
@@ -224,7 +221,7 @@ namespace Web.Controllers
             try
             {
                 await PutData(studentId, workId, value);
-                return StatusCode(204);
+                return StatusCode(200);
             }
             catch (DbUpdateException ex)
             {
@@ -250,8 +247,7 @@ namespace Web.Controllers
         /// <param name="workId">работа</param>
         /// <param name="values">массив значений</param>
         /// <returns>ответ</returns>
-        /// <response code="200">Не возвращается для этого метода</response>
-        /// <response code="204">Успешное обновление</response>
+        /// <response code="200">Успешное обновление</response>
         /// <response code="404">Не найден родительский объект (status quo)</response>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [HttpPut("{studentId}/{workId}")]
@@ -264,7 +260,7 @@ namespace Web.Controllers
                         values.Select(Convert.ToBoolean).ToArray())
                     )
                 );
-                return StatusCode(204);
+                return StatusCode(200);
             }
             catch (DbUpdateException ex)
             {
@@ -312,8 +308,7 @@ namespace Web.Controllers
         /// <param name="taskNumber">номер задания (от 1)</param>
         /// <param name="value">значение 0/1</param>
         /// <returns>ответ</returns>
-        /// <response code="200">Не возвращается для этого метода</response>
-        /// <response code="204">Успешное обновление</response>
+        /// <response code="200">Успешное обновление</response>
         /// <response code="404">Не найден родительский объект (status quo)</response>
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [HttpPatch("{studentId}/{workId}/{taskNumber}/{value}")]
@@ -322,7 +317,7 @@ namespace Web.Controllers
             try
             {
                 await PatchData(studentId, workId, taskNumber, value);
-                return StatusCode(204);
+                return StatusCode(200);
             }
             catch (DbUpdateException ex)
             {
@@ -373,8 +368,7 @@ namespace Web.Controllers
         /// <param name="studentId">студент</param>
         /// <param name="workId">работа</param>
         /// <returns>ответ</returns>
-        /// <response code="200">Не возвращается для этого метода</response>
-        /// <response code="204">Успешное удаление</response>
+        /// <response code="200">Успешное удаление</response>
         /// <response code="404">Объект для удаления не найден (status quo)</response>
         /// <response code="409">Существует некаскадная связь (status quo)</response>
         [HttpDelete("{studentId}/{workId}")]
@@ -391,7 +385,7 @@ namespace Web.Controllers
                 {
                     _dbContext.Entry(obj).State = EntityState.Deleted;
                     await _dbContext.SaveChangesAsync();
-                    return StatusCode(204);
+                    return StatusCode(200);
                 }
             }
             catch (DbUpdateException ex)
