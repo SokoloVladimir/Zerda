@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 
@@ -79,7 +81,7 @@ public partial class Work
 
     [ForeignKey("DisciplineId")]
     [InverseProperty("Work")]
-    public virtual Discipline Discipline { get; set; } = null!;
+    public virtual Discipline? Discipline { get; set; }
 
     [JsonIgnore]
     [InverseProperty("Work")]
@@ -87,9 +89,9 @@ public partial class Work
 
     [ForeignKey("SemesterId")]
     [InverseProperty("Work")]
-    public virtual Semester Semester { get; set; } = null!;
+    public virtual Semester? Semester { get; set; }
 
     [ForeignKey("WorkTypeId")]
     [InverseProperty("Work")]
-    public virtual WorkType WorkType { get; set; } = null!;
+    public virtual WorkType? WorkType { get; set; }
 }
