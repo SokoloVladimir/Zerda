@@ -91,6 +91,50 @@ namespace Web.Controllers
         }
         #endregion
 
+        #region PUT
+        /// <summary>
+        /// Обновление работы
+        /// </summary>
+        /// <response code="200">Не возвращается для этого метода</response>
+        /// <response code="201">Успешное обновление</response>
+        /// <returns>обновленный объект</returns>
+        [ProducesResponseType(typeof(Work), (int)HttpStatusCode.Created)]
+        [HttpPut()]
+        public async Task<IActionResult> Put([FromBody] Work obj)
+        {
+            try
+            {
+                Work? item = await _dbContext.Work
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(d => d.Id == obj.Id);
+                if (item is not null)
+                {
+                    _dbContext.Entry(obj).State = EntityState.Modified;
+                }
+                else
+                {
+                    _dbContext.Entry(obj).State = EntityState.Added;
+                }
+
+                await _dbContext.SaveChangesAsync();
+                return StatusCode(201, obj);
+            }
+            catch (DbUpdateException ex)
+            {
+                if (ex.InnerException is MySqlConnector.MySqlException && ex.InnerException.Message.Contains("Duplicate entry"))
+                {
+                    _logger.LogWarning("Попытка добавления дубликата");
+                    return StatusCode(204);
+                }
+                return StatusCode(500, "DbException");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+        #endregion
+
         #region DELETE
         /// <summary>
         /// Удаление работы
