@@ -91,7 +91,7 @@ namespace Web.Controllers
                 {
                     _dbContext.Entry(obj).State = EntityState.Deleted;
                     _dbContext.SaveChangesAsync();
-                    return 204;
+                    return 200;
                 }
             }
             catch (DbUpdateException ex)

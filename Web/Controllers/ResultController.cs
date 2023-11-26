@@ -1,5 +1,4 @@
-﻿using Asp.Versioning;
-using Data.Context;
+﻿using Data.Context;
 using Data.Model;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -29,7 +28,6 @@ namespace Web.Controllers
         /// </summary>
         /// <param name="studentId">фильтрация по студенту</param>
         /// <param name="workId">фильтрация по работе</param>
-        /// <param name="disciplineId">фильтрация по дисциплине</param>
         /// <param name="groupId">фильтрация по группе</param>
         /// <param name="limit">количество записей (до 50)</param>
         /// <param name="offset">смещение относительно начала таблицы</param>
@@ -40,7 +38,6 @@ namespace Web.Controllers
         public async Task<IActionResult> GetByStudentId(
             int? studentId = null,
             int? workId = null,
-            int? disciplineId = null,
             int? groupId = null,
             int limit = 50,
             int offset = 0
@@ -48,12 +45,11 @@ namespace Web.Controllers
         {
             return StatusCode(200, await _dbContext.Result
                 .AsNoTracking()
-                .Include(x => x.Work).ThenInclude(x => x.Discipline)
-                .Include(x => x.Student).ThenInclude(x => x.Group)
-                .Where(x => studentId == null || x.StudentId == studentId)
+                .Include(x => x.Work)
+                .Include(x => x.Student)
                 .Where(x => workId == null || x.WorkId == workId)
-                .Where(x => disciplineId == null || x.Work.DisciplineId == disciplineId)
-                .Where(x => groupId == null || x.Student.Group.Id == groupId)
+                .Where(x => studentId == null || x.StudentId == studentId)
+                .Where(x => groupId == null || x.Student.GroupId == groupId)
                 .OrderBy(x => x.StudentId).ThenBy(x => x.WorkId)
                 .Skip(offset)
                 .Take(Math.Min(limit, 50))
@@ -62,7 +58,7 @@ namespace Web.Controllers
                     x.StudentId,
                     x.WorkId,
                     Tasks = UnsetBitsAfterN(x.Tasks, (uint)x.Work.TaskCount),
-                    WorkTaskCount = x.Work.TaskCount
+                    TaskCount = x.Work.TaskCount
                 })
                 .ToListAsync()
             );
@@ -73,7 +69,6 @@ namespace Web.Controllers
         /// </summary>
         /// <param name="studentId">фильтрация по студенту</param>
         /// <param name="workId">фильтрация по работе</param>
-        /// <param name="disciplineId">фильтрация по дисциплине</param>
         /// <param name="groupId">фильтрация по группе</param>
         /// <param name="limit">количество записей (до 50)</param>
         /// <param name="offset">смещение относительно начала таблицы</param>
@@ -84,7 +79,6 @@ namespace Web.Controllers
         public async Task<IActionResult> GetByStudentIdBitArray(
             int? studentId = null,
             int? workId = null,
-            int? disciplineId = null,
             int? groupId = null,
             int limit = 50,
             int offset = 0
@@ -92,12 +86,11 @@ namespace Web.Controllers
         {
             return StatusCode(200, await _dbContext.Result
                 .AsNoTracking()
-                .Include(x => x.Work).ThenInclude(x => x.Discipline)
-                .Include(x => x.Student).ThenInclude(x => x.Group)
+                .Include(x => x.Student)
+                .Include(x => x.Work)                                
                 .Where(x => studentId == null || x.StudentId == studentId)
                 .Where(x => workId == null || x.WorkId == workId)
-                .Where(x => disciplineId == null || x.Work.DisciplineId == disciplineId)
-                .Where(x => groupId == null || x.Student.Group.Id == groupId)
+                .Where(x => groupId == null || x.Student.GroupId == groupId)
                 .OrderBy(x => x.StudentId).ThenBy(x => x.WorkId)
                 .Skip(offset)
                 .Take(Math.Min(limit, 50))
@@ -106,7 +99,7 @@ namespace Web.Controllers
                     x.StudentId,
                     x.WorkId,
                     Tasks = BitArrayToIntArray(new BitArray(BitConverter.GetBytes(x.Tasks)), (uint)x.Work.TaskCount),
-                    WorkTaskCount = x.Work.TaskCount
+                    TaskCount = x.Work.TaskCount
                 })
                 .ToListAsync()
             );
@@ -124,8 +117,7 @@ namespace Web.Controllers
         /// <param name="workId">работа</param>
         /// <param name="value">значения бит заданий упакованные в ULong число</param>
         /// <returns>ответ</returns>
-        /// <response code="200">Не возвращается для этого метода</response>
-        /// <response code="204">Успешное создание</response>
+        /// <response code="200">Успешное обновление</response>
         /// <response code="404">Не найден родительский объект (status quo)</response>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [HttpPost("{studentId}/{workId}/{value}")]
@@ -134,7 +126,7 @@ namespace Web.Controllers
             try
             {
                 await PostData(studentId, workId, value);
-                return StatusCode(204);
+                return StatusCode(200);
             }
             catch (DbUpdateException ex)
             {
@@ -160,8 +152,7 @@ namespace Web.Controllers
         /// <param name="studentId">студент</param>
         /// <param name="workId">работа</param>
         /// <returns>ответ</returns>
-        /// <response code="200">Не возвращается для этого метода</response>
-        /// <response code="204">Успешное создание</response>
+        /// <response code="200">Успешное обновление</response>
         /// <response code="404">Не найден родительский объект (status quo)</response>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [HttpPost("{studentId}/{workId}")]
@@ -174,7 +165,7 @@ namespace Web.Controllers
                         values.Select(Convert.ToBoolean).ToArray())
                     )
                 );
-                return StatusCode(204);
+                return StatusCode(200);
             }
             catch (DbUpdateException ex)
             {
@@ -190,17 +181,17 @@ namespace Web.Controllers
             }
         }
 
-        private async Task PostData(int studentId, int workId, uint value)
+        private async Task PostData(int studentId, int workid, uint value)
         {
-            Result? result = await _dbContext.Result.FirstOrDefaultAsync(x => x.StudentId == studentId && x.WorkId == workId);
-            Work work = await _dbContext.Work.FirstAsync(x => x.Id == workId);
+            Result? result = await _dbContext.Result.FirstOrDefaultAsync(x => x.StudentId == studentId && x.WorkId == workid);
+            Work work = await _dbContext.Work.FirstAsync(x => x.Id == workid);
 
             if (result is null)
             {
                 result = new Result()
                 {
                     StudentId = studentId,
-                    WorkId = workId,
+                    WorkId = workid,
                 };
 
                 _dbContext.Result.Add(result);
@@ -221,8 +212,7 @@ namespace Web.Controllers
         /// <param name="workId">работа</param>
         /// <param name="value">значения бит заданий упакованные в ULong число</param>
         /// <returns>ответ</returns>
-        /// <response code="200">Не возвращается для этого метода</response>
-        /// <response code="204">Успешное обновление</response>
+        /// <response code="200">Успешное обновление</response>
         /// <response code="404">Не найден родительский объект (status quo)</response>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [HttpPut("{studentId}/{workId}/{value}")]
@@ -231,7 +221,7 @@ namespace Web.Controllers
             try
             {
                 await PutData(studentId, workId, value);
-                return StatusCode(204);
+                return StatusCode(200);
             }
             catch (DbUpdateException ex)
             {
@@ -255,9 +245,9 @@ namespace Web.Controllers
         /// </remarks>       
         /// <param name="studentId">студент</param>
         /// <param name="workId">работа</param>
+        /// <param name="values">массив значений</param>
         /// <returns>ответ</returns>
-        /// <response code="200">Не возвращается для этого метода</response>
-        /// <response code="204">Успешное обновление</response>
+        /// <response code="200">Успешное обновление</response>
         /// <response code="404">Не найден родительский объект (status quo)</response>
         [ProducesResponseType((int)HttpStatusCode.NoContent)]
         [HttpPut("{studentId}/{workId}")]
@@ -270,7 +260,7 @@ namespace Web.Controllers
                         values.Select(Convert.ToBoolean).ToArray())
                     )
                 );
-                return StatusCode(204);
+                return StatusCode(200);
             }
             catch (DbUpdateException ex)
             {
@@ -311,15 +301,14 @@ namespace Web.Controllers
         /// Установка состояния конкретного задания
         /// </summary>      
         /// <remarks>
-        /// Выбивает или активирует соответсвующий бит. Безопасный метод. 
-        /// </remarks>       
+        /// Выбивает или активирует соответствующий бит. Безопасный метод. 
+        /// </remarks>
         /// <param name="studentId">студент</param>
         /// <param name="workId">работа</param>
         /// <param name="taskNumber">номер задания (от 1)</param>
         /// <param name="value">значение 0/1</param>
         /// <returns>ответ</returns>
-        /// <response code="200">Не возвращается для этого метода</response>
-        /// <response code="204">Успешное обновление</response>
+        /// <response code="200">Успешное обновление</response>
         /// <response code="404">Не найден родительский объект (status quo)</response>
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [HttpPatch("{studentId}/{workId}/{taskNumber}/{value}")]
@@ -328,7 +317,7 @@ namespace Web.Controllers
             try
             {
                 await PatchData(studentId, workId, taskNumber, value);
-                return StatusCode(204);
+                return StatusCode(200);
             }
             catch (DbUpdateException ex)
             {
@@ -379,8 +368,7 @@ namespace Web.Controllers
         /// <param name="studentId">студент</param>
         /// <param name="workId">работа</param>
         /// <returns>ответ</returns>
-        /// <response code="200">Не возвращается для этого метода</response>
-        /// <response code="204">Успешное удаление</response>
+        /// <response code="200">Успешное удаление</response>
         /// <response code="404">Объект для удаления не найден (status quo)</response>
         /// <response code="409">Существует некаскадная связь (status quo)</response>
         [HttpDelete("{studentId}/{workId}")]
@@ -397,7 +385,7 @@ namespace Web.Controllers
                 {
                     _dbContext.Entry(obj).State = EntityState.Deleted;
                     await _dbContext.SaveChangesAsync();
-                    return StatusCode(204);
+                    return StatusCode(200);
                 }
             }
             catch (DbUpdateException ex)

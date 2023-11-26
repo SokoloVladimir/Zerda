@@ -7,6 +7,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Data.Model;
 
+/// <summary>
+/// Аккаунт
+/// </summary>
 [Index("Login", Name = "Login_UNIQUE", IsUnique = true)]
 public partial class Account
 {

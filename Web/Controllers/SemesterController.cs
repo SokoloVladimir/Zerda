@@ -1,7 +1,6 @@
 using Asp.Versioning;
 using Data.Context;
 using Data.Model;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
@@ -10,13 +9,13 @@ namespace Web.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class WorkTypeController : ControllerBase
+    public class SemesterController : ControllerBase
     {
-        private readonly ILogger<WorkTypeController> _logger;
+        private readonly ILogger<SemesterController> _logger;
 
         private readonly ZerdaContext _dbContext;
 
-        public WorkTypeController(ILogger<WorkTypeController> logger, ZerdaContext dbContext)
+        public SemesterController(ILogger<SemesterController> logger, ZerdaContext dbContext)
         {
             _logger = logger;
             _dbContext = dbContext;
@@ -24,17 +23,17 @@ namespace Web.Controllers
 
         #region GET
         /// <summary>
-        /// Метод на получение типов работ
+        /// Метод на семестров
         /// </summary>
         /// <param name="limit">количество записей (до 50)</param>
         /// <param name="offset">смещение относительно начала таблицы</param>
         /// <returns>список объектов</returns>
         /// <response code="200">Успех</response>
-        [ProducesResponseType(typeof(IEnumerable<WorkType>), (int)HttpStatusCode.OK)]
+        [ProducesResponseType(typeof(IEnumerable<Semester>), (int)HttpStatusCode.OK)]
         [HttpGet()]
         public async Task<IActionResult> Get(int limit = 50, int offset = 0)
         {
-            return StatusCode(200, await _dbContext.WorkType
+            return StatusCode(200, await _dbContext.Semester
                 .AsNoTracking()
                 .OrderBy(x => x.Id)
                 .Skip(offset)
@@ -45,19 +44,19 @@ namespace Web.Controllers
 
         #region POST
         /// <summary>
-        /// Добавление типа работы
+        /// Добавление семестра
         /// </summary>
         /// <response code="200">Не возвращается для этого метода</response>
         /// <response code="201">Успешное добавление</response>
         /// <response code="204">Попытка добавления дубликата (status quo)</response>
         /// <returns>Созданный объект</returns>
-        [ProducesResponseType(typeof(WorkType), (int)HttpStatusCode.Created)]
+        [ProducesResponseType(typeof(Semester), (int)HttpStatusCode.Created)]
         [HttpPost()]
-        public async Task<IActionResult> Post([FromBody] WorkType obj)
+        public async Task<IActionResult> Post([FromBody] Semester obj)
         {
             try
             {
-                await _dbContext.WorkType.AddAsync(obj);
+                await _dbContext.Semester.AddAsync(obj);
                 await _dbContext.SaveChangesAsync();
                 return StatusCode(201, obj);
             }
@@ -79,21 +78,21 @@ namespace Web.Controllers
 
         #region PUT
         /// <summary>
-        /// Обновление типа работы
+        /// Обновление семестра
         /// </summary>
         /// <response code="200">Не возвращается для этого метода</response>
         /// <response code="201">Успешное обновление</response>
         /// <returns>обновленный объект</returns>
-        [ProducesResponseType(typeof(WorkType), (int)HttpStatusCode.Created)]
+        [ProducesResponseType(typeof(Semester), (int)HttpStatusCode.Created)]
         [HttpPut()]
-        public async Task<IActionResult> Put([FromBody] WorkType obj)
+        public async Task<IActionResult> Put([FromBody] Semester obj)
         {
             try
             {
-                WorkType? item = await _dbContext.WorkType
+                Semester? Semester = await _dbContext.Semester
                     .AsNoTracking()
                     .FirstOrDefaultAsync(d => d.Id == obj.Id);
-                if (item is not null)
+                if (Semester is not null)
                 {
                     _dbContext.Entry(obj).State = EntityState.Modified;
                 }
@@ -123,7 +122,7 @@ namespace Web.Controllers
 
         #region DELETE
         /// <summary>
-        /// Удаление типа работы
+        /// Удаление семестра
         /// </summary>
         /// <param name="id">идентификатор объекта</param>
         /// <returns>HTTP ответ</returns>
@@ -135,7 +134,7 @@ namespace Web.Controllers
         {
             try
             {
-                WorkType? obj = _dbContext.WorkType.FirstOrDefault(x => x.Id == id);
+                Semester? obj = _dbContext.Semester.FirstOrDefault(x => x.Id == id);
                 if (obj is null)
                 {
                     return NotFound();

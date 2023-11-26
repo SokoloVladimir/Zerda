@@ -82,8 +82,7 @@ namespace Web.Controllers
         /// </summary>
         /// <param name="id">идентификатор объекта</param>
         /// <returns>HTTP ответ</returns>
-        /// <response code="200">Не возвращается для этого метода</response>
-        /// <response code="204">Успешное удаление</response>
+        /// <response code="200">Успешное удаление</response>
         /// <response code="404">Объект для удаления не найден (status quo)</response>
         /// <response code="409">Существует некаскадная связь (status quo)</response>
         [HttpDelete("{id}")]
@@ -100,7 +99,7 @@ namespace Web.Controllers
                 {
                     _dbContext.Entry(obj).State = EntityState.Deleted;
                     await _dbContext.SaveChangesAsync();
-                    return StatusCode(204);
+                    return StatusCode(200);
                 }
             }
             catch (DbUpdateException ex)

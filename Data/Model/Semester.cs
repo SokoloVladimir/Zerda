@@ -8,24 +8,28 @@ using Microsoft.EntityFrameworkCore;
 namespace Data.Model;
 
 /// <summary>
-/// Тип работы
+/// Семестр академического года
 /// </summary>
-[Index("Name", Name = "Name_UNIQUE", IsUnique = true)]
-public partial class WorkType
+public partial class Semester
 {
     /// <summary>
-    /// Идентификатор типа работы
+    /// Идентификатор семестра
     /// </summary>
     [Key]
     public int Id { get; set; }
 
     /// <summary>
-    /// Наименование типа работы
+    /// Первый календарный год
     /// </summary>
-    [StringLength(50)]
-    public string Name { get; set; } = null!;
+    [Column(TypeName = "year")]
+    public short StartYear { get; set; }
+
+    /// <summary>
+    /// Если второй семестр
+    /// </summary>
+    public bool IsSecond { get; set; }
 
     [JsonIgnore]
-    [InverseProperty("WorkType")]
+    [InverseProperty("Semester")]
     public virtual ICollection<Work> Work { get; } = new List<Work>();
 }

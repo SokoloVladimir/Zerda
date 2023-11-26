@@ -27,6 +27,7 @@ namespace Web.Controllers
         /// </summary>
         /// <param name="disciplineId">фильтрация по дисциплине</param>
         /// <param name="workTypeId">фильтрация по типу работы</param>
+        /// <param name="semesterId">фильтрация по семестру</param>
         /// <param name="limit">количество записей (до 50)</param>
         /// <param name="offset">смещение относительно начала таблицы</param>
         /// <returns>список объектов</returns>
@@ -36,6 +37,7 @@ namespace Web.Controllers
         public async Task<IActionResult> Get(
             int? disciplineId = null,
             int? workTypeId = null,
+            int? semesterId = null,
             int limit = 50,
             int offset = 0
             )
@@ -43,9 +45,11 @@ namespace Web.Controllers
             return StatusCode(200, await _dbContext.Work
                 .AsNoTracking()
                 .Include(x => x.Discipline)
-                .Include(x => x.WorkType)
+                .Include(x => x.WorkType)                
+                .Include(x => x.Semester)
                 .Where(x => disciplineId == null || x.DisciplineId == disciplineId)
                 .Where(x => workTypeId == null || x.WorkTypeId == workTypeId)
+                .Where(x => semesterId == null || x.SemesterId == semesterId)
                 .OrderBy(x => x.Id)
                 .Skip(offset)
                 .Take(Math.Min(limit, 50))
@@ -87,14 +91,57 @@ namespace Web.Controllers
         }
         #endregion
 
+        #region PUT
+        /// <summary>
+        /// Обновление работы
+        /// </summary>
+        /// <response code="200">Не возвращается для этого метода</response>
+        /// <response code="201">Успешное обновление</response>
+        /// <returns>обновленный объект</returns>
+        [ProducesResponseType(typeof(Work), (int)HttpStatusCode.Created)]
+        [HttpPut()]
+        public async Task<IActionResult> Put([FromBody] Work obj)
+        {
+            try
+            {
+                Work? item = await _dbContext.Work
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(d => d.Id == obj.Id);
+                if (item is not null)
+                {
+                    _dbContext.Entry(obj).State = EntityState.Modified;
+                }
+                else
+                {
+                    _dbContext.Entry(obj).State = EntityState.Added;
+                }
+
+                await _dbContext.SaveChangesAsync();
+                return StatusCode(201, obj);
+            }
+            catch (DbUpdateException ex)
+            {
+                if (ex.InnerException is MySqlConnector.MySqlException && ex.InnerException.Message.Contains("Duplicate entry"))
+                {
+                    _logger.LogWarning("Попытка добавления дубликата");
+                    return StatusCode(204);
+                }
+                return StatusCode(500, "DbException");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+        #endregion
+
         #region DELETE
         /// <summary>
-        /// Удаление аккаунта
+        /// Удаление работы
         /// </summary>
         /// <param name="id">идентификатор объекта</param>
         /// <returns>HTTP ответ</returns>
-        /// <response code="200">Не возвращается для этого метода</response>
-        /// <response code="204">Успешное удаление</response>
+        /// <response code="200">Успешное удаление</response>
         /// <response code="404">Объект для удаления не найден (status quo)</response>
         /// <response code="409">Существует некаскадная связь (status quo)</response>
         [HttpDelete("{id}")]
@@ -111,7 +158,7 @@ namespace Web.Controllers
                 {
                     _dbContext.Entry(obj).State = EntityState.Deleted;
                     await _dbContext.SaveChangesAsync();
-                    return StatusCode(204);
+                    return StatusCode(200);
                 }
             }
             catch (DbUpdateException ex)

@@ -7,6 +7,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Data.Model;
 
+/// <summary>
+/// Группа
+/// </summary>
 [Index("Name", Name = "Name_UNIQUE", IsUnique = true)]
 public partial class Group
 {
@@ -19,8 +22,12 @@ public partial class Group
     /// <summary>
     /// Наименование (аббревиатура) группы
     /// </summary>
-    [StringLength(10)]
-    public string? Name { get; set; }
+    [StringLength(20)]
+    public string Name { get; set; } = null!;
+
+    [JsonIgnore]
+    [InverseProperty("Group")]
+    public virtual ICollection<Assignment> Assignment { get; } = new List<Assignment>();
 
     [JsonIgnore]
     [InverseProperty("Group")]
