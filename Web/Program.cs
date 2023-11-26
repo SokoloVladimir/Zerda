@@ -1,4 +1,6 @@
 using Data;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 namespace Web
@@ -14,6 +16,21 @@ namespace Web
             ServiceResolver.AddZerdaDbContext(builder.Services, configurator);
             builder.Services.AddSingleton(configurator);
 
+            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = AuthOptions.ISSUER,
+                    ValidateAudience = true,
+                    ValidAudience = AuthOptions.AUDIENCE,
+                    ValidateLifetime = true,
+                    IssuerSigningKey = AuthOptions.GetSymmetricSecurityKey(),
+                    ValidateIssuerSigningKey = true,
+                };
+            });
+
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(options =>
@@ -27,7 +44,7 @@ namespace Web
                 options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "Web.xml"));
 
                 options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-                {
+                {                    
                     Description = @"Type JWT auth.",
                     Name = "Authorization",
                     In = ParameterLocation.Header,
@@ -42,7 +59,7 @@ namespace Web
                       new OpenApiSecurityScheme
                       {
                         Reference = new OpenApiReference
-                        {
+                        {                            
                             Type = ReferenceType.SecurityScheme,
                             Id = "Bearer"
                         },
@@ -61,10 +78,11 @@ namespace Web
                 {
                     o.DocumentTitle = configurator.ApplicationName;
                 });
-            }
+            }           
 
             app.UseHttpsRedirection();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllers();

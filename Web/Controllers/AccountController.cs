@@ -1,9 +1,13 @@
 using Asp.Versioning;
 using Data.Context;
 using Data.Model;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Security.Claims;
 
 namespace Web.Controllers
 {
@@ -30,6 +34,7 @@ namespace Web.Controllers
         /// <returns>список объектов</returns>
         /// <response code="200">Успех</response>
         [ProducesResponseType(typeof(IEnumerable<Account>), (int)HttpStatusCode.OK)]
+        [Authorize()]
         [HttpGet()]
         public async Task<IActionResult> Get(int limit = 50, int offset = 0)
         {
@@ -73,6 +78,34 @@ namespace Web.Controllers
             {
                 return StatusCode(500);
             }
+        }
+
+        [HttpPost("token/{login}/{password}")]
+        public async Task<IActionResult> Token(string login, string password)
+        {
+            ClaimsIdentity? identity = GetIdentity(login, password);
+            if (identity is null)
+            {
+                return BadRequest(new { errorText = "Invalid creditionals" });
+            }
+
+            var now = DateTime.UtcNow;
+            var jwt = new JwtSecurityToken(
+                    issuer: AuthOptions.ISSUER,
+                    audience: AuthOptions.AUDIENCE,
+                    notBefore: now,
+                    claims: identity.Claims,
+                    expires: now.Add(TimeSpan.FromMinutes(AuthOptions.LIFETIME)),
+                    signingCredentials: new SigningCredentials(AuthOptions.GetSymmetricSecurityKey(), SecurityAlgorithms.HmacSha256));
+            var encodedJwt = new JwtSecurityTokenHandler().WriteToken(jwt);
+
+            var response = new
+            {
+                access_token = encodedJwt,
+                username = identity.Name
+            };
+
+            return new JsonResult(response);
         }
         #endregion
 
@@ -119,5 +152,29 @@ namespace Web.Controllers
 
         }
         #endregion
+
+        private ClaimsIdentity? GetIdentity(string login, string password)
+        {                     
+            Account? account = _dbContext.Account
+                .AsNoTracking()
+                .AsEnumerable()
+                .FirstOrDefault(x =>
+                x.Login == login &&
+                BCrypt.Net.BCrypt.Verify(password, x.PasswordHash)
+            );
+
+            if (account is null)
+            {
+                return null;
+            }
+
+            var claims = new List<Claim>()
+            {
+                new Claim(ClaimsIdentity.DefaultNameClaimType, account.Login),
+                new Claim(ClaimsIdentity.DefaultRoleClaimType, (account.Student is null) ? "teacher" : "student"),
+            };
+            ClaimsIdentity claimsIdentity = new ClaimsIdentity(claims, "Token", ClaimsIdentity.DefaultNameClaimType, ClaimsIdentity.DefaultRoleClaimType);
+            return claimsIdentity;
+        }
     }
 }
