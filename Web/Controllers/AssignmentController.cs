@@ -58,6 +58,7 @@ namespace Web.Controllers
         {
             try
             {
+                obj.AssignedDate = obj.AssignedDate ?? DateTime.Now;
                 _dbContext.Assignment.Entry(obj).State = EntityState.Added;
                 await _dbContext.SaveChangesAsync();
                 return StatusCode(201, obj);
@@ -103,6 +104,7 @@ namespace Web.Controllers
                     _dbContext.Entry(obj).State = EntityState.Added;
                 }
 
+                obj.AssignedDate = obj.AssignedDate ?? DateTime.Now;
                 await _dbContext.SaveChangesAsync();
                 return StatusCode(201, obj);
             }
