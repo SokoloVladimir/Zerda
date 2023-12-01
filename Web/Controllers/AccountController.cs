@@ -56,7 +56,7 @@ namespace Web.Controllers
         {
             try
             {
-                await _dbContext.Account.AddAsync(obj);
+                _dbContext.Account.Entry(obj).State = EntityState.Added;
                 await _dbContext.SaveChangesAsync();
                 return StatusCode(201, obj);
             }
