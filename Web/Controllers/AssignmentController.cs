@@ -1,25 +1,21 @@
 using Asp.Versioning;
 using Data.Context;
 using Data.Model;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
 using System.Net;
-using System.Security.Claims;
 
 namespace Web.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class AccountController : ControllerBase
+    public class AssignmentController : ControllerBase
     {
-        private readonly ILogger<AccountController> _logger;
+        private readonly ILogger<AssignmentController> _logger;
 
         private readonly ZerdaContext _dbContext;
 
-        public AccountController(ILogger<AccountController> logger, ZerdaContext dbContext)
+        public AssignmentController(ILogger<AssignmentController> logger, ZerdaContext dbContext)
         {
             _logger = logger;
             _dbContext = dbContext;
@@ -27,20 +23,21 @@ namespace Web.Controllers
 
         #region GET
         /// <summary>
-        /// Метод на получение аккаунтов
+        /// Метод на получение назначений
         /// </summary>
         /// <param name="limit">количество записей (до 50)</param>
         /// <param name="offset">смещение относительно начала таблицы</param>
         /// <returns>список объектов</returns>
         /// <response code="200">Успех</response>
-        [ProducesResponseType(typeof(IEnumerable<Account>), (int)HttpStatusCode.OK)]
-        [Authorize()]
+        [ProducesResponseType(typeof(IEnumerable<Assignment>), (int)HttpStatusCode.OK)]
         [HttpGet()]
         public async Task<IActionResult> Get(int limit = 50, int offset = 0)
         {
-            return StatusCode(200, await _dbContext.Account
+            return StatusCode(200, await _dbContext.Assignment               
                 .AsNoTracking()
-                .OrderBy(x => x.Id)
+                .Include(x => x.Work)
+                .Include(x => x.Group)
+                .OrderBy(x => x.WorkId).ThenBy(x => x.GroupId)
                 .Skip(offset)
                 .Take(Math.Min(limit, 50))
                 .ToListAsync());
@@ -49,19 +46,20 @@ namespace Web.Controllers
 
         #region POST
         /// <summary>
-        /// Добавление аккаунта
+        /// Добавление назначения
         /// </summary>
         /// <response code="200">Не возвращается для этого метода</response>
         /// <response code="201">Успешное добавление</response>
         /// <response code="204">Попытка добавления дубликата (status quo)</response>
         /// <returns>Созданный объект</returns>
-        [ProducesResponseType(typeof(Account), (int)HttpStatusCode.Created)]
+        [ProducesResponseType(typeof(Assignment), (int)HttpStatusCode.Created)]
         [HttpPost()]
-        public async Task<IActionResult> Post([FromBody] Account obj)
+        public async Task<IActionResult> Post([FromBody] Assignment obj)
         {
             try
             {
-                _dbContext.Account.Entry(obj).State = EntityState.Added;
+                obj.AssignedDate = obj.AssignedDate ?? DateTime.Now;
+                _dbContext.Assignment.Entry(obj).State = EntityState.Added;
                 await _dbContext.SaveChangesAsync();
                 return StatusCode(201, obj);
             }
@@ -79,51 +77,69 @@ namespace Web.Controllers
                 return StatusCode(500);
             }
         }
+        #endregion
 
-        [HttpPost("token/{login}/{password}")]
-        public async Task<IActionResult> Token(string login, string password)
+        #region PUT
+        /// <summary>
+        /// Обновление назначения
+        /// </summary>
+        /// <response code="200">Не возвращается для этого метода</response>
+        /// <response code="201">Успешное обновление</response>
+        /// <returns>обновленный объект</returns>
+        [ProducesResponseType(typeof(Assignment), (int)HttpStatusCode.Created)]
+        [HttpPut()]
+        public async Task<IActionResult> Put([FromBody] Assignment obj)
         {
-            ClaimsIdentity? identity = GetIdentity(login, password);
-            if (identity is null)
+            try
             {
-                return BadRequest(new { errorText = "Invalid creditionals" });
+                Assignment? Assignment = await _dbContext.Assignment
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(d => d.WorkId == obj.WorkId && d.GroupId == obj.GroupId);
+                if (Assignment is not null)
+                {
+                    _dbContext.Entry(obj).State = EntityState.Modified;
+                }
+                else
+                {
+                    _dbContext.Entry(obj).State = EntityState.Added;
+                }
+
+                obj.AssignedDate = obj.AssignedDate ?? DateTime.Now;
+                await _dbContext.SaveChangesAsync();
+                return StatusCode(201, obj);
             }
-
-            var now = DateTime.UtcNow;
-            var jwt = new JwtSecurityToken(
-                    issuer: AuthOptions.ISSUER,
-                    audience: AuthOptions.AUDIENCE,
-                    notBefore: now,
-                    claims: identity.Claims,
-                    expires: now.Add(TimeSpan.FromMinutes(AuthOptions.LIFETIME)),
-                    signingCredentials: new SigningCredentials(AuthOptions.GetSymmetricSecurityKey(), SecurityAlgorithms.HmacSha256));
-            var encodedJwt = new JwtSecurityTokenHandler().WriteToken(jwt);
-
-            var response = new
+            catch (DbUpdateException ex)
             {
-                access_token = encodedJwt,
-                username = identity.Name
-            };
-
-            return new JsonResult(response);
+                if (ex.InnerException is MySqlConnector.MySqlException && ex.InnerException.Message.Contains("Duplicate entry"))
+                {
+                    _logger.LogWarning("Попытка добавления дубликата");
+                    return StatusCode(204);
+                }
+                return StatusCode(500, "DbException");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
         }
         #endregion
 
         #region DELETE
         /// <summary>
-        /// Удаление аккаунта
+        /// Удаление назначения
         /// </summary>
-        /// <param name="id">идентификатор объекта</param>
+        /// <param name="workId">идентификатор работы</param>
+        /// <param name="groupId">идентификатор группы</param>
         /// <returns>HTTP ответ</returns>
         /// <response code="200">Успешное удаление</response>
         /// <response code="404">Объект для удаления не найден (status quo)</response>
         /// <response code="409">Существует некаскадная связь (status quo)</response>
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        [HttpDelete("{workId}/{groupId}")]
+        public async Task<IActionResult> Delete(int workId, int groupId)
         {
             try
             {
-                Account? obj = _dbContext.Account.FirstOrDefault(x => x.Id == id);
+                Assignment? obj = _dbContext.Assignment.FirstOrDefault(x => x.WorkId == workId && x.GroupId == groupId);
                 if (obj is null)
                 {
                     return NotFound();
@@ -152,29 +168,5 @@ namespace Web.Controllers
 
         }
         #endregion
-
-        private ClaimsIdentity? GetIdentity(string login, string password)
-        {                     
-            Account? account = _dbContext.Account
-                .AsNoTracking()
-                .AsEnumerable()
-                .FirstOrDefault(x =>
-                x.Login == login &&
-                BCrypt.Net.BCrypt.Verify(password, x.PasswordHash)
-            );
-
-            if (account is null)
-            {
-                return null;
-            }
-
-            var claims = new List<Claim>()
-            {
-                new Claim(ClaimsIdentity.DefaultNameClaimType, account.Login),
-                new Claim(ClaimsIdentity.DefaultRoleClaimType, (account.Student is null) ? "teacher" : "student"),
-            };
-            ClaimsIdentity claimsIdentity = new ClaimsIdentity(claims, "Token", ClaimsIdentity.DefaultNameClaimType, ClaimsIdentity.DefaultRoleClaimType);
-            return claimsIdentity;
-        }
     }
 }

@@ -30,7 +30,7 @@ public partial class Assignment
     /// Дата назначения работы
     /// </summary>
     [Column(TypeName = "datetime")]
-    public DateTime AssignedDate { get; set; }
+    public DateTime? AssignedDate { get; set; }
 
     [ForeignKey("GroupId")]
     [InverseProperty("Assignment")]

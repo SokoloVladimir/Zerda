@@ -58,7 +58,7 @@ namespace Web.Controllers
                     x.StudentId,
                     x.WorkId,
                     Tasks = UnsetBitsAfterN(x.Tasks, (uint)x.Work.TaskCount),
-                    TaskCount = x.Work.TaskCount
+                    x.LastEdit
                 })
                 .ToListAsync()
             );
@@ -99,7 +99,7 @@ namespace Web.Controllers
                     x.StudentId,
                     x.WorkId,
                     Tasks = BitArrayToIntArray(new BitArray(BitConverter.GetBytes(x.Tasks)), (uint)x.Work.TaskCount),
-                    TaskCount = x.Work.TaskCount
+                    x.LastEdit
                 })
                 .ToListAsync()
             );
@@ -192,6 +192,7 @@ namespace Web.Controllers
                 {
                     StudentId = studentId,
                     WorkId = workid,
+                    LastEdit = DateTime.UtcNow,
                 };
 
                 _dbContext.Result.Add(result);
@@ -287,6 +288,7 @@ namespace Web.Controllers
                 {
                     StudentId = studentId,
                     WorkId = workId,
+                    LastEdit = DateTime.UtcNow,
                 };
 
                 _dbContext.Result.Add(result);
@@ -344,6 +346,7 @@ namespace Web.Controllers
                 {
                     StudentId = studentId,
                     WorkId = workId,
+                    LastEdit = DateTime.UtcNow,
                 };
 
                 _dbContext.Result.Add(result);
