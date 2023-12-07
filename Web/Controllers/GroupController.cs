@@ -1,6 +1,7 @@
 ﻿using Asp.Versioning;
 using Data.Context;
 using Data.Model;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
@@ -9,6 +10,7 @@ namespace Web.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Authorize(Roles = "teacher")]
     public class GroupController : ControllerBase
     {
         private readonly ILogger<GroupController> _logger;

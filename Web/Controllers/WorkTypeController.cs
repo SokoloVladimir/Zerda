@@ -10,6 +10,7 @@ namespace Web.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Authorize(Roles = "teacher")]
     public class WorkTypeController : ControllerBase
     {
         private readonly ILogger<WorkTypeController> _logger;

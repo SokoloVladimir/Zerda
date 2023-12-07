@@ -13,6 +13,7 @@ namespace Web.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Authorize(Roles = "teacher")]
     public class AccountController : ControllerBase
     {
         private readonly ILogger<AccountController> _logger;
@@ -34,7 +35,6 @@ namespace Web.Controllers
         /// <returns>список объектов</returns>
         /// <response code="200">Успех</response>
         [ProducesResponseType(typeof(IEnumerable<Account>), (int)HttpStatusCode.OK)]
-        [Authorize()]
         [HttpGet()]
         public async Task<IActionResult> Get(int limit = 50, int offset = 0)
         {
@@ -81,6 +81,7 @@ namespace Web.Controllers
         }
 
         [HttpPost("token/{login}/{password}")]
+        [AllowAnonymous]
         public async Task<IActionResult> Token(string login, string password)
         {
             ClaimsIdentity? identity = GetIdentity(login, password);
@@ -102,7 +103,11 @@ namespace Web.Controllers
             var response = new
             {
                 access_token = encodedJwt,
-                username = identity.Name
+                username = identity.Name,
+                role = (await _dbContext.Account
+                    .AsNoTracking()
+                    .Include(x => x.Student)                   
+                    .FirstAsync(x => x.Login == login)).Student is null ? "teacher" : "student"
             };
 
             return new JsonResult(response);
@@ -157,6 +162,7 @@ namespace Web.Controllers
         {                     
             Account? account = _dbContext.Account
                 .AsNoTracking()
+                .Include(x => x.Student)
                 .AsEnumerable()
                 .FirstOrDefault(x =>
                 x.Login == login &&
@@ -172,7 +178,7 @@ namespace Web.Controllers
             {
                 new Claim(ClaimsIdentity.DefaultNameClaimType, account.Login),
                 new Claim(ClaimsIdentity.DefaultRoleClaimType, (account.Student is null) ? "teacher" : "student"),
-            };
+            };                       
             ClaimsIdentity claimsIdentity = new ClaimsIdentity(claims, "Token", ClaimsIdentity.DefaultNameClaimType, ClaimsIdentity.DefaultRoleClaimType);
             return claimsIdentity;
         }
