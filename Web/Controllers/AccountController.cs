@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Data;
 using Data.Context;
 using Data.Model;
 using Microsoft.AspNetCore.Authorization;
@@ -8,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Claims;
+using System.Text;
 
 namespace Web.Controllers
 {
@@ -20,10 +22,13 @@ namespace Web.Controllers
 
         private readonly ZerdaContext _dbContext;
 
-        public AccountController(ILogger<AccountController> logger, ZerdaContext dbContext)
+        private readonly Configurator _configurator;
+
+        public AccountController(ILogger<AccountController> logger, ZerdaContext dbContext, Configurator configurator)
         {
             _logger = logger;
             _dbContext = dbContext;
+            _configurator = configurator;
         }
 
         #region GET
@@ -84,30 +89,34 @@ namespace Web.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Token(string login, string password)
         {
-            ClaimsIdentity? identity = GetIdentity(login, password);
-            if (identity is null)
+            Account account;
+            ClaimsIdentity identity;
+
+            try
+            {
+                (account, identity) = GetIdentity(login, password);
+            }
+            catch (ArgumentException)
             {
                 return BadRequest(new { errorText = "Invalid creditionals" });
             }
 
-            var now = DateTime.UtcNow;
-            var jwt = new JwtSecurityToken(
-                    issuer: AuthOptions.ISSUER,
-                    audience: AuthOptions.AUDIENCE,
-                    notBefore: now,
-                    claims: identity.Claims,
-                    expires: now.Add(TimeSpan.FromMinutes(AuthOptions.LIFETIME)),
-                    signingCredentials: new SigningCredentials(AuthOptions.GetSymmetricSecurityKey(), SecurityAlgorithms.HmacSha256));
-            var encodedJwt = new JwtSecurityTokenHandler().WriteToken(jwt);
+
+            DateTime now = DateTime.UtcNow;
+            JwtSecurityToken jwt = new JwtSecurityToken(
+                issuer: _configurator.JwtOptions.Issuer,
+                audience: _configurator.JwtOptions.Audience,
+                claims: identity.Claims,
+                notBefore: now,                    
+                expires: now.Add(TimeSpan.FromMinutes(_configurator.JwtOptions.Lifetime)),
+                signingCredentials: new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configurator.JwtOptions.Key)), SecurityAlgorithms.HmacSha256)
+            );
 
             var response = new
             {
-                access_token = encodedJwt,
+                access_token = new JwtSecurityTokenHandler().WriteToken(jwt),
                 username = identity.Name,
-                role = (await _dbContext.Account
-                    .AsNoTracking()
-                    .Include(x => x.Student)                   
-                    .FirstAsync(x => x.Login == login)).Student is null ? "teacher" : "student"
+                role = account.Student is null ? "teacher" : "student"
             };
 
             return new JsonResult(response);
@@ -158,7 +167,7 @@ namespace Web.Controllers
         }
         #endregion
 
-        private ClaimsIdentity? GetIdentity(string login, string password)
+        private (Account, ClaimsIdentity) GetIdentity(string login, string password)
         {                     
             Account? account = _dbContext.Account
                 .AsNoTracking()
@@ -171,7 +180,7 @@ namespace Web.Controllers
 
             if (account is null)
             {
-                return null;
+                throw new ArgumentException("identity not found-");
             }
 
             var claims = new List<Claim>()
@@ -180,7 +189,7 @@ namespace Web.Controllers
                 new Claim(ClaimsIdentity.DefaultRoleClaimType, (account.Student is null) ? "teacher" : "student"),
             };                       
             ClaimsIdentity claimsIdentity = new ClaimsIdentity(claims, "Token", ClaimsIdentity.DefaultNameClaimType, ClaimsIdentity.DefaultRoleClaimType);
-            return claimsIdentity;
+            return (account, claimsIdentity);
         }
     }
 }

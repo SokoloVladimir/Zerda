@@ -1,7 +1,9 @@
 using Data;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Text;
 
 namespace Web
 {
@@ -11,7 +13,7 @@ namespace Web
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            ServiceResolver.Configurator configurator = new ServiceResolver.Configurator(builder.Configuration);
+            Configurator configurator = new Configurator(builder.Configuration);
 
             ServiceResolver.AddZerdaDbContext(builder.Services, configurator);
             builder.Services.AddSingleton(configurator);
@@ -22,11 +24,11 @@ namespace Web
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
-                    ValidIssuer = AuthOptions.ISSUER,
+                    ValidIssuer = configurator.JwtOptions.Issuer,
                     ValidateAudience = true,
-                    ValidAudience = AuthOptions.AUDIENCE,
-                    ValidateLifetime = true,
-                    IssuerSigningKey = AuthOptions.GetSymmetricSecurityKey(),
+                    ValidAudience = configurator.JwtOptions.Audience,
+                    ValidateLifetime = true,                   
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configurator.JwtOptions.Key)),
                     ValidateIssuerSigningKey = true,
                 };
             });
