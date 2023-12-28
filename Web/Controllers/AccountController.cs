@@ -1,24 +1,34 @@
 using Asp.Versioning;
+using Data;
 using Data.Context;
 using Data.Model;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
+using System.Security.Claims;
+using System.Text;
 
 namespace Web.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Authorize(Roles = "teacher")]
     public class AccountController : ControllerBase
     {
         private readonly ILogger<AccountController> _logger;
 
         private readonly ZerdaContext _dbContext;
 
-        public AccountController(ILogger<AccountController> logger, ZerdaContext dbContext)
+        private readonly Configurator _configurator;
+
+        public AccountController(ILogger<AccountController> logger, ZerdaContext dbContext, Configurator configurator)
         {
             _logger = logger;
             _dbContext = dbContext;
+            _configurator = configurator;
         }
 
         #region GET
@@ -74,6 +84,43 @@ namespace Web.Controllers
                 return StatusCode(500);
             }
         }
+
+        [HttpPost("token/{login}/{password}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> Token(string login, string password)
+        {
+            Account account;
+            ClaimsIdentity identity;
+
+            try
+            {
+                (account, identity) = GetIdentity(login, password);
+            }
+            catch (ArgumentException)
+            {
+                return BadRequest(new { errorText = "Invalid creditionals" });
+            }
+
+
+            DateTime now = DateTime.UtcNow;
+            JwtSecurityToken jwt = new JwtSecurityToken(
+                issuer: _configurator.JwtOptions.Issuer,
+                audience: _configurator.JwtOptions.Audience,
+                claims: identity.Claims,
+                notBefore: now,                    
+                expires: now.Add(TimeSpan.FromMinutes(_configurator.JwtOptions.Lifetime)),
+                signingCredentials: new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configurator.JwtOptions.Key)), SecurityAlgorithms.HmacSha256)
+            );
+
+            var response = new
+            {
+                access_token = new JwtSecurityTokenHandler().WriteToken(jwt),
+                username = identity.Name,
+                role = account.Student is null ? "teacher" : "student"
+            };
+
+            return new JsonResult(response);
+        }
         #endregion
 
         #region DELETE
@@ -119,5 +166,30 @@ namespace Web.Controllers
 
         }
         #endregion
+
+        private (Account, ClaimsIdentity) GetIdentity(string login, string password)
+        {                     
+            Account? account = _dbContext.Account
+                .AsNoTracking()
+                .Include(x => x.Student)
+                .AsEnumerable()
+                .FirstOrDefault(x =>
+                x.Login == login &&
+                BCrypt.Net.BCrypt.Verify(password, x.PasswordHash)
+            );
+
+            if (account is null)
+            {
+                throw new ArgumentException("identity not found-");
+            }
+
+            var claims = new List<Claim>()
+            {
+                new Claim(ClaimsIdentity.DefaultNameClaimType, account.Login),
+                new Claim(ClaimsIdentity.DefaultRoleClaimType, (account.Student is null) ? "teacher" : "student"),
+            };                       
+            ClaimsIdentity claimsIdentity = new ClaimsIdentity(claims, "Token", ClaimsIdentity.DefaultNameClaimType, ClaimsIdentity.DefaultRoleClaimType);
+            return (account, claimsIdentity);
+        }
     }
 }

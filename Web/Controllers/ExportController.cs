@@ -1,13 +1,16 @@
 ﻿using Data.Context;
 using Data.Model;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Web.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Authorize(Roles = "teacher")]
     public class ExportController : ControllerBase
     {
         private static readonly char delimeter = ',';
@@ -74,7 +77,7 @@ namespace Web.Controllers
                 foreach (Work work in assignedWorks)
                 {
                     builder.Append(
-                        GetBeatifyTasks(
+                        GetBeatifyCountTasks(
                             results.FirstOrDefault(x => x.StudentId == student.Id && x.WorkId == work.Id)?.Tasks,
                             work.TaskCount
                         ) + delimeter
@@ -101,6 +104,22 @@ namespace Web.Controllers
                 return String.Join(delimeterReplace, tasks);
             }
             return String.Empty;
+        }
+
+        private static string GetBeatifyCountTasks(ulong? value, sbyte taskCount)
+        {
+            int count = 0;
+            if (value.HasValue)
+            {
+                for (int i = 0; i < taskCount; i++)
+                {
+                    if ((value & (ulong)(1 << i)) != 0)
+                    {
+                        count++;
+                    }
+                }
+            }
+            return $"{count} из {taskCount}";
         }
 
         private static string GetBeatifyWorkTypeWithNumber(WorkType workType, int workNumber)

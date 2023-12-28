@@ -1,14 +1,17 @@
 ﻿using Asp.Versioning;
 using Data.Context;
 using Data.Model;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System.Net;
 
 namespace Web.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Authorize(Roles = "teacher")]
     public class WorkController : ControllerBase
     {
         private readonly ILogger<WorkController> _logger;
@@ -28,32 +31,63 @@ namespace Web.Controllers
         /// <param name="disciplineId">фильтрация по дисциплине</param>
         /// <param name="workTypeId">фильтрация по типу работы</param>
         /// <param name="semesterId">фильтрация по семестру</param>
+        /// <param name="groupId">фильтрация по группе (назначенные работы)</param>        
         /// <param name="limit">количество записей (до 50)</param>
         /// <param name="offset">смещение относительно начала таблицы</param>
         /// <returns>список объектов</returns>
         /// <response code="200">Успех</response>
         [ProducesResponseType(typeof(IEnumerable<Work>), (int)HttpStatusCode.OK)]
         [HttpGet()]
+        [AllowAnonymous]
         public async Task<IActionResult> Get(
             int? disciplineId = null,
             int? workTypeId = null,
             int? semesterId = null,
+            int? groupId = null,
             int limit = 50,
             int offset = 0
             )
         {
-            return StatusCode(200, await _dbContext.Work
-                .AsNoTracking()
-                .Include(x => x.Discipline)
-                .Include(x => x.WorkType)                
-                .Include(x => x.Semester)
-                .Where(x => disciplineId == null || x.DisciplineId == disciplineId)
-                .Where(x => workTypeId == null || x.WorkTypeId == workTypeId)
-                .Where(x => semesterId == null || x.SemesterId == semesterId)
-                .OrderBy(x => x.Id)
-                .Skip(offset)
-                .Take(Math.Min(limit, 50))
-                .ToListAsync());
+            if (HttpContext.User.Claims.IsNullOrEmpty())
+            {
+                return Unauthorized();
+            }
+            if (HttpContext.User.IsInRole("student"))
+            {
+                Account account = _dbContext.Account
+                    .AsNoTracking()
+                    .Include(x => x.Student)
+                    .First(x => x.Login == HttpContext.User.Identity!.Name);
+                if (groupId is not null && groupId != account.Student?.Id)
+                {
+                    return Forbid();
+                }
+                groupId = account.Student?.Id;
+            }
+            else if (!HttpContext.User.IsInRole("teacher"))
+            {
+                return Forbid();
+            }
+
+            List<Work> works = await _dbContext.Work
+               .AsNoTracking()
+               .Include(x => x.Discipline)
+               .Include(x => x.WorkType)
+               .Include(x => x.Semester)
+               .Where(x => disciplineId == null || x.DisciplineId == disciplineId)
+               .Where(x => workTypeId == null || x.WorkTypeId == workTypeId)
+               .Where(x => semesterId == null || x.SemesterId == semesterId)
+               .OrderBy(x => x.Id)
+               .Skip(offset)
+               .Take(Math.Min(limit, 50))
+               .ToListAsync();
+
+            if (groupId is not null)
+            {
+                List<int> cachedAssigned = await _dbContext.Assignment.Where(x => x.GroupId == groupId).Select(x => x.WorkId).ToListAsync();
+                works = works.Where(x => cachedAssigned.Contains(x.Id)).ToList();
+            }
+            return StatusCode(200, works);
         }
         #endregion
 

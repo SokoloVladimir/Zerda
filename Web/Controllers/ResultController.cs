@@ -1,7 +1,9 @@
 ﻿using Data.Context;
 using Data.Model;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System.Collections;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
@@ -10,6 +12,7 @@ namespace Web.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Authorize(Roles = "teacher")]
     public class ResultController : ControllerBase
     {
         private readonly ILogger<ResultController> _logger;
@@ -35,6 +38,7 @@ namespace Web.Controllers
         /// <response code="200">Успех</response>
         [ProducesResponseType(typeof(IEnumerable<Result>), (int)HttpStatusCode.OK)]
         [HttpGet()]
+        [AllowAnonymous]
         public async Task<IActionResult> GetByStudentId(
             int? studentId = null,
             int? workId = null,
@@ -43,6 +47,27 @@ namespace Web.Controllers
             int offset = 0
             )
         {
+            if (HttpContext.User.Claims.IsNullOrEmpty())
+            {
+                return Unauthorized();
+            }
+            if (HttpContext.User.IsInRole("student"))
+            {
+                Account account = _dbContext.Account
+                    .AsNoTracking()
+                    .Include(x => x.Student)
+                    .First(x => x.Login == HttpContext.User.Identity!.Name);               
+                if (studentId is not null && studentId != account.Student?.Id)
+                {
+                    return Forbid();
+                }
+                studentId = account.Student?.Id;
+            }
+            else if (!HttpContext.User.IsInRole("teacher"))
+            {
+                return Forbid();
+            }
+
             return StatusCode(200, await _dbContext.Result
                 .AsNoTracking()
                 .Include(x => x.Work)
@@ -76,6 +101,7 @@ namespace Web.Controllers
         /// <response code="200">Успех</response>
         [ProducesResponseType((int)HttpStatusCode.OK)]
         [HttpGet("withBitArray")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetByStudentIdBitArray(
             int? studentId = null,
             int? workId = null,
@@ -84,6 +110,27 @@ namespace Web.Controllers
             int offset = 0
             )
         {
+            if (HttpContext.User.Claims.IsNullOrEmpty())
+            {
+                return Unauthorized();
+            }
+            if (HttpContext.User.IsInRole("student"))
+            {
+                Account account = _dbContext.Account
+                    .AsNoTracking()
+                    .Include(x => x.Student)
+                    .First(x => x.Login == HttpContext.User.Identity!.Name);
+                if (studentId is not null && studentId != account.Student?.Id)
+                {
+                    return Forbid();
+                }
+                studentId = account.Student?.Id;
+            }
+            else if (!HttpContext.User.IsInRole("teacher"))
+            {
+                return Forbid();
+            }
+
             return StatusCode(200, await _dbContext.Result
                 .AsNoTracking()
                 .Include(x => x.Student)

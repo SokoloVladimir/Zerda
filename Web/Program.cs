@@ -1,5 +1,9 @@
 using Data;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Text;
 
 namespace Web
 {
@@ -9,10 +13,25 @@ namespace Web
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            ServiceResolver.Configurator configurator = new ServiceResolver.Configurator(builder.Configuration);
+            Configurator configurator = new Configurator(builder.Configuration);
 
             ServiceResolver.AddZerdaDbContext(builder.Services, configurator);
             builder.Services.AddSingleton(configurator);
+
+            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = configurator.JwtOptions.Issuer,
+                    ValidateAudience = true,
+                    ValidAudience = configurator.JwtOptions.Audience,
+                    ValidateLifetime = true,                   
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configurator.JwtOptions.Key)),
+                    ValidateIssuerSigningKey = true,
+                };
+            });
 
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
@@ -27,7 +46,7 @@ namespace Web
                 options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "Web.xml"));
 
                 options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-                {
+                {                    
                     Description = @"Type JWT auth.",
                     Name = "Authorization",
                     In = ParameterLocation.Header,
@@ -42,7 +61,7 @@ namespace Web
                       new OpenApiSecurityScheme
                       {
                         Reference = new OpenApiReference
-                        {
+                        {                            
                             Type = ReferenceType.SecurityScheme,
                             Id = "Bearer"
                         },
@@ -61,10 +80,11 @@ namespace Web
                 {
                     o.DocumentTitle = configurator.ApplicationName;
                 });
-            }
+            }           
 
             app.UseHttpsRedirection();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllers();
